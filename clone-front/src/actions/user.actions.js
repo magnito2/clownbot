@@ -68,7 +68,7 @@ function oauthlogin(data) {
 function logout() {
     userService.logout();
     history.push('/login');
-    alertActions.success('Logout successful');
+    alertActions.success('Bye! See you next time');
     return { type: userConstants.LOGOUT };
 }
 

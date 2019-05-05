@@ -14,6 +14,9 @@ class AccountMenu extends Component {
 
     handleChange(e){
         e.preventDefault();
+        if ( e.target.classList.contains( 'logout-button' ) ) {
+            userActions.logout();
+        }
         if (!this.state.show_dropdown){
             document.body.addEventListener('click', this.handleChange);
         }
@@ -52,7 +55,7 @@ class AccountMenu extends Component {
                                 </div>
                             </div>
                             <div class="account-dropdown__footer">
-                                <a href="#" onClick={() => userActions.logout()}>
+                                <a href="#" className="logout-button">
                                     <i class="zmdi zmdi-power"></i>Logout</a>
                             </div>
                         </div>

@@ -1,11 +1,15 @@
 import sqlalchemy
 from sqlalchemy.ext.declarative import declarative_base
-import threading, logging
+import threading, logging, configparser
 from contextlib import contextmanager
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
-engine = sqlalchemy.create_engine('mysql://root:@localhost/clown_bot')
+config = configparser.ConfigParser()
+config.read('config.ini')
+database_uri = config.get('SQLALCHEMY', 'DATABASE_URI')
+
+engine = sqlalchemy.create_engine(database_uri)
 Session = sessionmaker(bind=engine)
 Base = declarative_base()
 
