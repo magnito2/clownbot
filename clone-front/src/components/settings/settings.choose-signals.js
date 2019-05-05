@@ -10,7 +10,8 @@ class SignalsForm extends Component{
             exchange : null,
             signals : [],
             checked_signals : [],
-            submitted: false
+            submitted: false,
+            exchange_accounts : []
         };
         this.handleSubmit = this.handleSubmit.bind(this);
         this.handleChange = this.handleChange.bind(this);
@@ -33,6 +34,7 @@ class SignalsForm extends Component{
         }else{
             const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
             this.setState({ [name]: value });
+
         }
     }
 
@@ -57,11 +59,14 @@ class SignalsForm extends Component{
         if (nextProps.signals !== this.state.signals) {
             this.setState({ signals: nextProps.signals });
         }
+        if (nextProps.settings){
+            this.setState({exchange_accounts: nextProps.settings.accounts});
+        }
 
     }
 
     render(){
-        const { exchange, submitted, signals } = this.state;
+        const { exchange, submitted, signals, exchange_accounts } = this.state;
 
         return (<MainWrapper>
             <form class="" onSubmit={this.handleSubmit}>
@@ -74,9 +79,10 @@ class SignalsForm extends Component{
                             <div class="form-group">
                                 <label for="company" class=" form-control-label">Exchange</label>
                                 <select name="exchange" id="selectLg" class="form-control-lg form-control" onChange={this.handleChange}>
-                                    <option value="">Choose Exchange</option>
-                                    <option value="binance">Binance</option>
-                                    <option value="bittrex">Bittrex</option>
+                                    <option value="">Choose Account</option>
+                                    {
+                                        exchange_accounts && exchange_accounts.map ( acc => <option value={acc.exchange_account_id}>{acc.exchange}</option>)
+                                    }
                                 </select>
                             </div>
                             {
@@ -114,9 +120,9 @@ class SignalsForm extends Component{
 }
 
 function mapStateToProps(state) {
-    const { signals } = state;
+    const { signals, settings } = state;
     return {
-        signals
+        signals, settings
     };
 }
 

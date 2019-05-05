@@ -1,7 +1,8 @@
-from flask_restful import Resource, reqparse
+from flask_restful import Resource, reqparse, abort
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from .. import db, user_datastore
+from .. import db, user_datastore, app
 from dashboard.models import ExchangeAccount
+import requests
 
 parser = reqparse.RequestParser()
 parser.add_argument('exchange')
@@ -45,6 +46,8 @@ class ExchangeSettings(Resource):
         fixed_amount_per_order = args.get('fixed_amount_per_order')
         use_fixed_amount_per_order = args.get('use_fixed_amount_per_order')
 
+        has_error = False
+
         exchange_accounts = [account for account in user.exchange_accounts if account.exchange == exchange]
         if exchange_accounts:
             exchange_account = exchange_accounts[0]
@@ -65,13 +68,33 @@ class ExchangeSettings(Resource):
                 exchange_account.use_fixed_amount_per_order = True if use_fixed_amount_per_order == "True" else False
             if fixed_amount_per_order:
                 exchange_account.fixed_amount_per_order = fixed_amount_per_order
+
+            db.session.commit()
+
             response = {"action": "starting-bot", "message": "Your trading bot will be started"}
+
+            params = {
+                'signal_name': 'AddAccount',
+                'command': True,
+                'account_id': exchange_account.id
+            }
+            resp = requests.post(app.config['BOT_ADDRESS'], json=params)
+            if not resp.status_code == 200:
+                response = {'message': "Ooops, we developed a problem handling the command"}
+                has_error = True
+            result = resp.json()
+            if not result['success']:
+                response = {'message': 'something went wrong somewhere..'}
+                has_error = True
+
 
         else:
 
             exchange_account = ExchangeAccount(exchange=exchange, api_key=api_key, api_secret=api_secret)
             user.exchange_accounts.append(exchange_account)
+            db.session.commit()
             response = {"action": "get-settings", "message": "Now set up some options you want to use"}
 
-        db.session.commit()
+        if has_error:
+            abort(500, message=response.get('message'))
         return response

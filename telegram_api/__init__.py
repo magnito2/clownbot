@@ -4,7 +4,7 @@ The telegram api. Recieves signals from telegram and broadcasts events.
 '''
 from telethon import TelegramClient, events
 import logging, asyncio
-from .tg_signals import CQSScalpingFree, MagnitoCrypto
+from .tg_signals import CQSScalpingFree, MagnitoCrypto, QualitySignalsChannel
 
 logger = logging.getLogger('clone.tg')
 logging.getLogger('clone.tg').setLevel(level=logging.DEBUG)

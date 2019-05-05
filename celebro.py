@@ -4,7 +4,7 @@ the brain.
 
 import asyncio, logging, configparser
 
-from telegram_api import MyTelegramClient, MagnitoCrypto, CQSScalpingFree
+from telegram_api import MyTelegramClient, MagnitoCrypto, CQSScalpingFree, QualitySignalsChannel
 
 from signals_reciever import HttpSignalReciever
 
@@ -82,7 +82,9 @@ class Celebro:
 
         binance_trader_queues = [trader.orders_queue for trader in self.exchange_traders if trader._exchange == "BINANCE"]
         bittrex_traders_queues = [trader.orders_queue for trader in self.exchange_traders if trader._exchange == "BITTREX"]
-        self.tg_client = MyTelegramClient(binance_trader_queues, bittrex_traders_queues, [MagnitoCrypto, CQSScalpingFree])
+
+        magcrypt = MagnitoCrypto(QualitySignalsChannel)
+        self.tg_client = MyTelegramClient(binance_trader_queues, bittrex_traders_queues, [magcrypt, CQSScalpingFree, QualitySignalsChannel])
         producers = [asyncio.create_task(self.tg_client.run())]
 
         for trader in self.exchange_traders: #pass tg_client message queue to every traderxc
@@ -179,11 +181,18 @@ class Celebro:
                 self.http_signal_handler.binance_queues.remove(trader.orders_queue)
             elif trader._exchange == "BITTREX":
                 self.tg_client.bittrex_queues.remove(trader.orders_queue)
-                self.http_signal_handler.bittrex_queues.remove(trader.orders_queue)
+
+                #self.http_signal_handler.bittrex_queues.remove(trader.orders_queue)
             self.exchange_traders.remove(trader)
 
 
     async def reload_account(self, account_id):
-        await self.remove_account(account_id)
-        asyncio.sleep(30)
-        await self.add_account(account_id)
+        try:
+            await self.remove_account(account_id)
+        except Exception as e:
+            logger.exception(e)
+        await asyncio.sleep(30)
+        try:
+            await self.add_account(account_id)
+        except Exception as e:
+            logger.exception(e)

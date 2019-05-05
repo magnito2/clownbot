@@ -64,7 +64,6 @@ class Trader:
         else:
             logger.error(f"[+] TG not set up properly")
 
-        logger.info("[+] Warming up..")
         await self.warmup()
         logger.info(f"[+] Entering the main loop of {self._exchange}")
         while self.keep_running:

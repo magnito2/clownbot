@@ -42,6 +42,10 @@ class HttpSignalReciever:
                 logger.info(f"********Putting {signal} into queues")
                 for queue in self.bittrex_queues:
                     await queue.put(signal)
+        elif 'command' in data:
+            if data['signal_name'] == "AddAccount":
+                logger.info(f"[+] Adding a new bot")
+                await self.celebro_instance.reload_account(data['account_id'])
         else:
             logger.info(f"[+] I recieved {data} which I could not understand")
         return web.json_response({'success':True})
