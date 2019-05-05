@@ -2,7 +2,7 @@
 #!/usr/bin/env python3
 # countasync.py
 
-import asyncio, logging
+import asyncio, logging, configparser
 from aiohttp import web
 
 logger = logging.getLogger('clone.http_handler')
@@ -12,6 +12,9 @@ class HttpSignalReciever:
     def __init__(self, binance_queues, bittrex_queues):
         self.binance_queues = binance_queues
         self.bittrex_queues = bittrex_queues
+        config = configparser.ConfigParser()
+        config.read('./config.ini')
+        self.listening_port = config.getint('HTTP_SIGNAL_RECIEVER', 'PORT')
 
     async def handle_command(self, request):
 
@@ -50,7 +53,7 @@ class HttpSignalReciever:
             app.add_routes([web.post('/signal', self.handle_command)])
             runner = web.AppRunner(app)
             await runner.setup()
-            site = web.TCPSite(runner, 'localhost', 8080)
+            site = web.TCPSite(runner, 'localhost', self.listening_port)
             await site.start()
             #await web.run_app(app)
             while True:
