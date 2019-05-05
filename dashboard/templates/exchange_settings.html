@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block styles %}{% endblock %}
+
+{% block content %}
+<div class="content">
+    <div class="row">
+        <div class="col col-md-6 col-md-offset-2">
+            <div class="card">
+                <div class="card-content">
+                    <ul class="nav nav-tabs">
+                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#binance">Binance</a></li>
+                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#bittrex">Bittrex</a></li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div id="binance" class="tab-pane fade">
+                            <h3>BINANCE</h3>
+                            <div id="binance_form"></div>
+                        </div>
+                        <div id="bittrex" class="tab-pane fade">
+                            <h3>BITTREX</h3>
+                            <div id="bittrex_form"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- Load our React component. -->
+    <script type="text/babel" src="react/binance_form.jsx"></script>
+    <script type="text/babel" src="react/bittrex_form.jsx"></script>
+{% endblock %}

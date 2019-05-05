@@ -1,0 +1,37 @@
+{% from "security/_macros.html" import render_field_with_errors, render_field %}
+{% include "security/_messages.html" %}
+{% extends "base.html" %}
+
+{% block styles %}
+<link href="css/login.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="wrapper fadeInDown">
+  <div id="formContent">
+    <!-- Tabs Titles -->
+
+    <!-- Icon -->
+    <div class="fadeIn first">
+      <h5 class="mark">Zignally Clone</h5>
+    </div>
+
+    <!-- Login Form -->
+    <form action="{{ url_for_security('login') }}" method="POST" name="login_user_form">
+        {{ login_user_form.hidden_tag() }}
+        {{ render_field_with_errors(login_user_form.email, class ="fadeIn second", placeholder="login") }}
+        {{ render_field_with_errors(login_user_form.password, class="fadeIn third", placeholder="password") }}
+        {{ render_field_with_errors(login_user_form.remember, class="fadeIn third") }}
+        {{ render_field(login_user_form.next) }}
+        {{ render_field(login_user_form.submit, class="fadeIn fourth", value="Log In") }}
+    </form>
+
+    <!-- Remind Passowrd -->
+    <div id="formFooter">
+        <a class="underlineHover" href="{{ url_for_security('register') }}">Create an Account</a> <hr/>
+        <a class="underlineHover" href="#">Forgot Password?</a>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

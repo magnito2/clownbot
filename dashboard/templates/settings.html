@@ -1,0 +1,152 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="col-lg-12">
+    <div class="card">
+        <div class="card-header">
+            <nav>
+                <div class="nav nav-tabs" id="nav-tab-main" role="tablist">
+                    <a class="nav-item nav-link active" id="nav-home-tab" data-toggle="tab" href="#nav-home" role="tab" aria-controls="nav-home"
+                       aria-selected="true">API KEYS</a>
+                    <a class="nav-item nav-link" id="nav-profile-tab" data-toggle="tab" href="#nav-profile" role="tab" aria-controls="nav-profile"
+                       aria-selected="false">BOT SETTINGS</a>
+                </div>
+            </nav>
+        </div>
+        <div class="card-body">
+            <div class="default-tab">
+                <div class="tab-content pl-3 pt-2" id="nav-tabContent-main">
+                    <div class="tab-pane fade show active" id="nav-home" role="tabpanel" aria-labelledby="nav-home-tab">
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>EXCHANGE KEYS</h4>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted m-b-15">Please Enter your exchange Keys</p>
+                                    <div class="default-tab">
+                                        <nav>
+                                            <div class="nav nav-tabs" id="nav-tab" role="tablist">
+                                                <a class="nav-item nav-link active" id="nav-binance-tab" data-toggle="tab" href="#nav-binance" role="tab" aria-controls="nav-binance"
+                                                   aria-selected="true">Binance</a>
+                                                <a class="nav-item nav-link" id="nav-bittrex-tab" data-toggle="tab" href="#nav-bittrex" role="tab" aria-controls="nav-bittrex"
+                                                   aria-selected="false">Bittrex</a>
+                                            </div>
+                                        </nav>
+                                        <div class="tab-content pl-3 pt-2" id="nav-tabContent">
+                                            <div class="tab-pane fade show active" id="nav-binance" role="tabpanel" aria-labelledby="nav-binance-tab">
+                                                {% set binance_form = forms.get('binance') %}
+                                                <form action="{{ binance_form.action }}" method="post" class="">
+                                                    <input type="hidden" name="exchange" value="BINANCE">
+                                                    <div class="{{'has-warning' if binance_form.api_key.errors}} form-group">
+                                                        <div class="input-group">
+                                                            <div class="input-group-addon">
+                                                                <i class="fa fa-key"></i>
+                                                            </div>
+                                                            <input type="text" id="binance-key" name="api_key" placeholder="API Key" value="{{ binance_form.api_key.data }}" class="form-control {{'is-invalid' if binance_form.api_key.errors}}">
+                                                            {% if binance_form.api_key.errors %}
+                                                            {% for error in binance_form.api_key.errors %}
+                                                            <small class="form-text text-muted">{{ error }}</small>
+                                                            {% endfor %}
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <div class="input-group">
+                                                            <div class="input-group-addon">
+                                                                <i class="fa fa-asterisk"></i>
+                                                            </div>
+                                                            <input type="text" id="binance-secret" name="secret_key" placeholder="Secret Key" value="{{ binance_form.api_secret.data }}" class="form-control {{'is-invalid' if binance_form.api_key.errors}}">
+                                                            {% if binance_form.api_key.errors %}
+                                                            {% for error in binance_form.api_key.errors %}
+                                                            <small class="form-text text-muted">{{ error }}</small>
+                                                            {% endfor %}
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    <div class="form-actions form-group">
+                                                        <button type="submit" class="btn btn-success btn-sm">Submit</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                            <div class="tab-pane fade" id="nav-bittrex" role="tabpanel" aria-labelledby="nav-bittrex-tab">
+                                                {% set bittrex_form = forms.get('bittrex') %}
+                                                <form action="{{ bittrex_form.action }}" method="post" class="">
+                                                    <input type="hidden" name="exchange" value="BITTREX">
+                                                    {{ bittrex_form.csrf_token }}
+                                                    <div class="form-group">
+                                                        <div class="input-group">
+                                                            <div class="input-group-addon">
+                                                                <i class="fa fa-user"></i>
+                                                            </div>
+                                                            <input type="text" id="bittrex-api-key" name="bittrex_api_key" placeholder="API Key" value="{{ bittrex_form.api_key.data }}" class="form-control">
+                                                        </div>
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <div class="input-group">
+                                                            <div class="input-group-addon">
+                                                                <i class="fa fa-asterisk"></i>
+                                                            </div>
+                                                            <input type="text" id="bittrex-secret" name="bittrex_secret_key" placeholder="Secret Key" value="{{ bittrex_form.api_secret.data}}" class="form-control">
+                                                        </div>
+                                                    </div>
+                                                    <div class="form-actions form-group">
+                                                        <button type="submit" class="btn btn-success btn-sm">Submit</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="nav-profile" role="tabpanel" aria-labelledby="nav-profile-tab">
+                        <div class="row">
+                            {% if forms.get('binance') %}
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>BINANCE SETTINGS</h4>
+                                </div>
+                                <div class="card-body">
+                                    <div id="binance_form"></div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if forms.get('bittrex') %}
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>BITTREX SETTINGS</h4>
+                                </div>
+                                <div class="card-body">
+                                    <div id="bittrex_form"></div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+
+<!-- Load React. -->
+    <!-- Note: when deploying, replace "development.js" with "production.min.js". -->
+    <script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+<!-- Load our React component. -->
+    <script type="text/babel" src="react/binance_form.jsx"></script>
+    <script type="text/babel" src="react/bittrex_form.jsx"></script>
+
+{% endblock %}

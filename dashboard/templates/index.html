@@ -1,0 +1,85 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row m-t-25">
+    <div class="col-sm-12 col-lg-6">
+        <div class="overview-wrap">
+            <h2 class="title-1">Portfolio</h2>
+        </div>
+        <div class="overview-item overview-item--c1">
+            <div class="overview__inner">
+                <div class="overview-box clearfix">
+                    <div class="icon">
+                        <i class="zmdi zmdi-account-o"></i>
+                    </div>
+                    <div class="text">
+                        <h2>30%</h2>
+                        <span>portfolio growth</span>
+                    </div>
+                </div>
+                <div class="overview-chart">
+                    <canvas id="widgetChart1"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-lg-9">
+        <div class="overview-wrap">
+            <h2 class="title-1">Buys</h2>
+        </div>
+        <div class="table-responsive table--no-card m-b-40">
+            <table class="table table-borderless table-striped table-earning">
+                <thead>
+                <tr>
+                    <th>Exchange</th>
+                    <th>symbol</th>
+                    <th>price</th>
+                    <th>amount</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for order in orders['buys'] %}
+                    <tr>
+                        <td>{{ order.exchange }}</td>
+                        <td>{{ order.symbol }}</td>
+                        <td>{{ order.price }}</td>
+                        <td>{{ order.quantity }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-lg-9">
+        <div class="overview-wrap">
+            <h2 class="title-1">Sells</h2>
+        </div>
+        <div class="table-responsive table--no-card m-b-40">
+            <table class="table table-borderless table-striped table-earning">
+                <thead>
+                <tr>
+                    <th>Exchange</th>
+                    <th>symbol</th>
+                    <th>price</th>
+                    <th>amount</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for order in orders['sells'] %}
+                <tr>
+                    <td>{{ order.exchange }}</td>
+                    <td>{{ order.symbol }}</td>
+                    <td>{{ order.price }}</td>
+                    <td>{{ order. quantity }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

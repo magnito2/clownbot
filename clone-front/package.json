@@ -1,0 +1,37 @@
+{
+  "name": "clone-front",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "animsition": "^4.0.2",
+    "chart.js": "^2.8.0",
+    "react": "^16.8.6",
+    "react-chartjs-2": "^2.7.6",
+    "react-dom": "^16.8.6",
+    "react-dom-factories": "^1.0.2",
+    "react-redux": "^7.0.2",
+    "react-redux-notify": "^4.1.1",
+    "react-router-dom": "^5.0.0",
+    "react-scripts": "2.1.8",
+    "react-selectize": "^3.0.1",
+    "react-transition-group": "^1.2.1",
+    "redux": "^4.0.1",
+    "redux-thunk": "^2.3.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ],
+  "proxy": "http://localhost:5000"
+}
