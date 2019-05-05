@@ -60,10 +60,16 @@ class SettingsForm extends Component{
 
     componentWillReceiveProps(nextProps) {
 
-        if (this.state.exchange in nextProps.settings){
-            const exchange_settings = nextProps.settings[this.state.exchange];
-            this.setState({account_exists: true});
-
+        if (nextProps.settings.accounts.length > 0){
+            const exchange_settings = nextProps.settings.accounts.find(acc => acc.exchange ===this.state.exchange);
+            if (exchange_settings !== undefined){
+                console.log("Our exchange settings  ya mwisho kapsaaa", exchange_settings);
+                this.setState({account_exists: true});
+            }
+            else{
+                return
+            }
+            console.log("Our latest settings are", exchange_settings, "Our exchange is", this.state.exchange);
             if (exchange_settings.api_key !== this.state.api_key) {
                 this.setState({ api_key: exchange_settings.api_key });
             }

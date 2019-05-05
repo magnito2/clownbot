@@ -15,6 +15,7 @@ class HttpSignalReciever:
         config = configparser.ConfigParser()
         config.read('./config.ini')
         self.listening_port = config.getint('HTTP_SIGNAL_RECIEVER', 'PORT')
+        self.celebro_instance = None
 
     async def handle_command(self, request):
 
@@ -42,7 +43,7 @@ class HttpSignalReciever:
                 for queue in self.bittrex_queues:
                     await queue.put(signal)
         else:
-            logger.info(f"[+] I recieved {data} which is not a signal")
+            logger.info(f"[+] I recieved {data} which I could not understand")
         return web.json_response({'success':True})
 
     async def run(self):

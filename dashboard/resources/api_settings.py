@@ -45,12 +45,10 @@ class ExchangeSettings(Resource):
         fixed_amount_per_order = args.get('fixed_amount_per_order')
         use_fixed_amount_per_order = args.get('use_fixed_amount_per_order')
 
-        print(f"[+] {'*'*20}received notifications {receive_notifications} {'*'*20}")
         exchange_accounts = [account for account in user.exchange_accounts if account.exchange == exchange]
         if exchange_accounts:
             exchange_account = exchange_accounts[0]
-            print(f"Account found, {exchange_account}")
-            print(f"Args are {profit_margin} {stop_loss_trigger} {cancel_order_seconds} {min_order_percentage}")
+
             if profit_margin:
                 exchange_account.profit_margin = profit_margin
             if stop_loss_trigger:
@@ -67,11 +65,13 @@ class ExchangeSettings(Resource):
                 exchange_account.use_fixed_amount_per_order = True if use_fixed_amount_per_order == "True" else False
             if fixed_amount_per_order:
                 exchange_account.fixed_amount_per_order = fixed_amount_per_order
+            response = {"action": "starting-bot", "message": "Your trading bot will be started"}
 
-            print(f"Exchange account updated, {exchange_account}")
         else:
-            print("Exchange account not found, creating one")
+
             exchange_account = ExchangeAccount(exchange=exchange, api_key=api_key, api_secret=api_secret)
             user.exchange_accounts.append(exchange_account)
+            response = {"action": "get-settings", "message": "Now set up some options you want to use"}
 
         db.session.commit()
+        return response

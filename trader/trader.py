@@ -49,6 +49,7 @@ class Trader:
         self.account_model_id = kwargs.get('exchange_account_model_id')
         self.last_portfolio_update_time = datetime.utcnow()
         self.portfolio_update_interval = kwargs.get('portfolio_update_interval', 300)
+        self.keep_running = True
 
     async def run(self):
         '''
@@ -66,7 +67,7 @@ class Trader:
         logger.info("[+] Warming up..")
         await self.warmup()
         logger.info(f"[+] Entering the main loop of {self._exchange}")
-        while True:
+        while self.keep_running:
             logger.info(f"[+] {self._exchange} Awaiting the next order")
             try:
                 _params = await asyncio.wait_for(self.orders_queue.get(), timeout=60)

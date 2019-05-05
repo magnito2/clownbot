@@ -18,10 +18,11 @@ function create(settings) {
         authorize().then(() => settingsService.create(settings))
             .then(
                 settings => {
-                    console.log("Success creating settings");
                     dispatch(success(settings));
-                    dispatch(alertActions.success('New Settings created'));
-                    //dispatch(alertActions.success(settings.message.toString()));
+                    dispatch(alertActions.success(settings.message.toString()));
+                    if(settings.action === "get-settings"){
+                        window.location.reload(true);
+                    }
                     console.log("settings created", settings);
                 },
                 error => {
