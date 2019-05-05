@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { connect } from "react-redux";
-import {signalsActions} from "../../actions";
+import {signalsActions, settingsActions} from "../../actions";
 import {MainWrapper} from "../wrappers/main";
 
 class SignalsForm extends Component{
@@ -33,13 +33,16 @@ class SignalsForm extends Component{
             })
         }else{
             const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+            if(name === "exchange"){
+                this.props.dispatch(signalsActions.getCheckedSignals(value));
+            }
             this.setState({ [name]: value });
-
         }
     }
 
     componentDidMount(){
         this.props.dispatch(signalsActions.get(null));
+        this.props.dispatch(settingsActions.get());
     }
 
     handleSubmit(e) {
@@ -49,24 +52,27 @@ class SignalsForm extends Component{
         const { exchange, checked_signals } = this.state;
         const { dispatch } = this.props;
         if (exchange) {
-            dispatch(signalsActions.create({exchange, signals: checked_signals}));
+            dispatch(signalsActions.create({exchange_account: exchange, signals: checked_signals}));
         }
-
     }
 
     componentWillReceiveProps(nextProps) {
 
-        if (nextProps.signals !== this.state.signals) {
-            this.setState({ signals: nextProps.signals });
+        if (nextProps.signals) {
+            if(nextProps.signals.list.length > 0){
+                this.setState({ signals: nextProps.signals.list });
+            }
+            if(nextProps.signals.checked_signals.length > 0){
+                this.setState({checked_signals: nextProps.signals.checked_signals});
+            }
         }
         if (nextProps.settings){
             this.setState({exchange_accounts: nextProps.settings.accounts});
         }
-
     }
 
     render(){
-        const { exchange, submitted, signals, exchange_accounts } = this.state;
+        const { exchange, submitted, signals, exchange_accounts, checked_signals } = this.state;
 
         return (<MainWrapper>
             <form class="" onSubmit={this.handleSubmit}>
@@ -96,7 +102,7 @@ class SignalsForm extends Component{
                                                             <div class="checkbox">
                                                                 <label for="checkbox1" class="form-check-label ">
                                                                     <input type="checkbox" id={'checkbox-' + signal.name}
-                                                                           name={"signal-" + signal.name} checked={signal.subscribed}
+                                                                           name={"signal-" + signal.name} checked={checked_signals.includes(signal.name)}
                                                                            class="form-check-input" onChange={this.handleChange}/>{signal.name}
                                                                 </label>
                                                             </div>

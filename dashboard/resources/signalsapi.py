@@ -10,7 +10,6 @@ parser.add_argument("exchange_account")
 
 class SignalsAPI(Resource):
 
-
     @jwt_required
     def get(self):
         email = get_jwt_identity()
@@ -34,16 +33,13 @@ class SignalsAPI(Resource):
         user = user_datastore.get_user(email)
 
         args = parser.parse_args()
-        exchange = args.get('exchange')
+        exchange_account_id = args.get('exchange_account')
         signal_names = args.get('signals')
-        print(f"[+] Our signal names are {signal_names}")
         signals = [Signal.query.filter_by(name=signal_name).first() for signal_name in signal_names]
-        print(f"[+] Our signals are {signals} from {signal_names}")
-        exchange_accounts = [account for account in user.exchange_accounts if account.exchange == exchange.upper()]
-        print(f"[+] The exchange accounts are {exchange_accounts} for exchange {exchange}")
-        if exchange_accounts:
-            exchange_account = exchange_accounts[0]
-            print(f"[+] The exchange account is {exchange_account}")
+
+
+        exchange_account = ExchangeAccount.query.get(exchange_account_id)
+        if exchange_account:
             for signal in signals:
                 if signal not in exchange_account.signals:
                     exchange_account.signals.append(signal)
@@ -53,3 +49,23 @@ class SignalsAPI(Resource):
                     exchange_account.signals.remove(signal)
 
             db.session.commit()
+
+class CheckedSignalsAPI(Resource):
+
+    @jwt_required
+    def get(self):
+        email = get_jwt_identity()
+        user = user_datastore.get_user(email)
+
+        args = parser.parse_args()
+        exchange_account_id = args.get('exchange_account')
+        if not user:
+            abort(401, message=f"No user found for email {email}")
+
+        exchange_account = ExchangeAccount.query.get(exchange_account_id)
+        if not exchange_account:
+            abort(401, message="You have not created an account")
+        signals = exchange_account.signals
+        resp = [signal.name for signal in signals]
+        print(f"[+] Signals are {resp}")
+        return resp

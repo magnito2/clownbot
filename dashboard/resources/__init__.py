@@ -2,7 +2,7 @@ from .. import api
 from .auth import UserLogin,UserRegistration, UserLogoutAccess, UserLogoutRefresh, TokenRefresh, SecretResource
 from .ordersapi import OrdersAPI
 from .api_settings import ExchangeSettings
-from .signalsapi import SignalsAPI
+from .signalsapi import SignalsAPI, CheckedSignalsAPI
 from .portfolioapi import PortfolioAPI, BTCValuesAPI
 from .manual_orders_api import ManualOrdersAPI, ExchangeSymbolsAPI
 
@@ -17,6 +17,8 @@ api.add_resource(ExchangeSettings, '/api/exchange/settings')
 
 api.add_resource(OrdersAPI, '/api/orders/')
 api.add_resource(SignalsAPI, '/api/signals')
+api.add_resource(CheckedSignalsAPI, '/api/checked-signals')
+
 api.add_resource(PortfolioAPI, '/api/portfolios')
 api.add_resource(BTCValuesAPI, '/api/portfolios/btc-values')
 api.add_resource(ManualOrdersAPI, '/api/manualorders')

@@ -5,6 +5,7 @@ import querystring from 'querystring';
 export const signalsService = {
     create,
     get,
+    getCheckedSignals
 };
 
 function create(signals) {
@@ -28,6 +29,15 @@ function get(exchange_account = null) {
     };
     const params = {exchange_account };
     return fetch(`${config.apiUrl}/api/signals?${querystring.stringify(params)}`, requestOptions).then(handleResponse);
+}
+
+function getCheckedSignals(exchange_account) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+    const params = {exchange_account };
+    return fetch(`${config.apiUrl}/api/checked-signals?${querystring.stringify(params)}`, requestOptions).then(handleResponse);
 }
 
 function handleResponse(response) {

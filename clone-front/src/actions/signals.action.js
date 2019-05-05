@@ -7,6 +7,7 @@ import {authorize} from "../helpers/authorize";
 export const signalsActions = {
     create,
     get,
+    getCheckedSignals
 };
 
 function create(signals) {
@@ -49,4 +50,20 @@ function get(exchange_account = null) {
     function request() { return { type: signalsConstants.GET_REQUEST } }
     function success(signals) { return { type: signalsConstants.GET_SUCCESS, signals } }
     function failure(error) { return { type: signalsConstants.GET_FAILURE, error } }
+}
+
+function getCheckedSignals(exchange_account) {
+    return dispatch => {
+        dispatch(request());
+
+        authorize().then(() => signalsService.getCheckedSignals(exchange_account))
+            .then(
+                signals => dispatch(success(signals)),
+                error => dispatch(failure(error.toString()))
+            );
+    };
+
+    function request() { return { type: signalsConstants.GET_CHECKED_REQUEST } }
+    function success(signals) { return { type: signalsConstants.GET_CHECKED_SUCCESS, signals } }
+    function failure(error) { return { type: signalsConstants.GET_CHECKED_FAILURE, error } }
 }
