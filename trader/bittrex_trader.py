@@ -501,6 +501,12 @@ class BittrexTrader(Trader):
         #order get open orders every 10 minutes, else open orders should be updated via websockets trade event.
         try:
             orders_res = await self.get_open_orders()
+            if orders_res['error']:
+                print("-"*100)
+                print("*"*100)
+                print("_"*100)
+                logger.error(orders_res['message'])
+                return
             orders = orders_res['result']
             await self.print_open_orders(orders)
             logger.info("[+] Checking for expired orders and stop lossed orders")
