@@ -2,22 +2,33 @@ import React, { Component } from 'react';
 import {Line} from 'react-chartjs-2';
 
 function PortfolioChart(props) {
-    const {data} = props;
+    const {portfolios, labels} = props;
+    const colours = {
+        'BITTREX': {
+            backgroundColor: 'rgba(167, 232, 192,.1)',
+            borderColor: 'rgba(167, 232, 192,.55)'
+        },
+        'BINANCE': {
+            backgroundColor: 'rgba(237, 220, 220,.1)',
+            borderColor: 'rgba(237, 220, 220,.55)'
+        }
+    }
     return <Line height={50}
                  data={{
-                         labels: data.map(function(d) {
-                             return d.timestamp;
-                         }),
+                         labels: labels,
                          type: 'line',
-                         datasets: [{
-                             data: data.map(function (d) {
-                                 return parseFloat(d.btc_value);
-                             }),
-                             label: 'BTC_Value',
-                             backgroundColor: 'rgba(255,255,255,.1)',
-                             borderColor: 'rgba(255,255,255,.55)',
+                         datasets: Object.keys(portfolios).map(exchange => {
+                             return {
+                                 data: portfolios[exchange].map(function (d) {
+                                     return parseFloat(d);
+                                 }),
+                                 label: exchange,
+                                 backgroundColor: colours[exchange].backgroundColor,
+                                 borderColor: colours[exchange].borderColor,
+                             }
                          }
-                         ]
+                         )
+
                  }
 }
             options={

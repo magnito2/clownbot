@@ -1,8 +1,9 @@
 import { portfoliosConstants } from "../constants";
 
 const initialState = {
-    list : [],
-    btc_values:[]
+    portfolios : {},
+    btc_values:[],
+    labels:[]
 };
 
 export function portfolios(state = initialState, action) {
@@ -13,7 +14,8 @@ export function portfolios(state = initialState, action) {
             console.log("our portfolios are", action.portfolios);
             return {
                 ...state,
-                list: action.portfolios
+                portfolios: action.portfolio.portfolios,
+                labels: action.portfolio.labels
             };
         case portfoliosConstants.GETALL_FAILURE:
             console.log("Failed to get portfolios");
@@ -26,7 +28,8 @@ export function portfolios(state = initialState, action) {
             console.log("our portfolio is", action.portfolio);
             return {
                 ...state,
-                list: action.portfolio
+                portfolios: action.portfolio.portfolios,
+                labels: action.portfolio.labels
             };
         case portfoliosConstants.GET_FAILURE:
             console.log("Failed to get portfolio");

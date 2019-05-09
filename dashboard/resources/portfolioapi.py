@@ -4,7 +4,6 @@ from ..models import ExchangeAccount, Portfolio
 from .. import  user_datastore, db
 
 parser = reqparse.RequestParser()
-parser.add_argument("exchange_account_id")
 
 class PortfolioAPI(Resource):
 
@@ -13,17 +12,21 @@ class PortfolioAPI(Resource):
     def get(self):
         email = get_jwt_identity()
         user = user_datastore.get_user(email)
-
-        args = parser.parse_args()
-        exchange_account_id = args.get('exchange_account_id')
         if not user:
             abort(401, message=f"No user found for email {email}")
-        if not exchange_account_id:
-            abort(401, message=f"No exchange account found for {exchange_account_id}")
-        exchange_account = ExchangeAccount.query.get(exchange_account_id)
-        portfolios = exchange_account.portfolio
-        if portfolios:
-            return [portfolio.serialize() for portfolio in portfolios]
+
+        exchange_accounts = user.exchange_accounts
+        if not exchange_accounts:
+            abort(401, message="You need to create an account")
+        resp = {}
+        labels = Portfolio.create_labels(user)
+        for account in exchange_accounts:
+            resp[account.exchange] = Portfolio.serialize_with_labels(labels, account.portfolio)
+
+        return {
+            'portfolios': resp,
+            'labels': [label.isoformat() for label in labels]
+        }
 
 class BTCValuesAPI(Resource):
 

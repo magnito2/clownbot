@@ -7,13 +7,12 @@ export const portfoliosService = {
     getBTCValues
 };
 
-function get(id = null) {
+function get() {
     const requestOptions = {
         method: 'GET',
         headers: authHeader()
     };
-    const params = {exchange_account_id: id};
-    return fetch(`${config.apiUrl}/api/portfolios?${querystring.stringify(params)}`, requestOptions).then(handleResponse);
+    return fetch(`${config.apiUrl}/api/portfolios`, requestOptions).then(handleResponse);
 }
 
 function getBTCValues() {

@@ -9,7 +9,6 @@ export function orders(state = initialState, action) {
     switch (action.type)
     {
         case ordersConstants.GETALL_SUCCESS:
-            console.log("our orders are", action.orders);
             return {
                 ...state,
                 list: action.orders
@@ -22,7 +21,6 @@ export function orders(state = initialState, action) {
             };
 
         case ordersConstants.GET_SUCCESS:
-            console.log("our order is", action.order);
             return {
                 ...state,
                 list: [...state.orders.list, action.order]

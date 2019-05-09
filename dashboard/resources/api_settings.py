@@ -52,6 +52,10 @@ class ExchangeSettings(Resource):
         if exchange_accounts:
             exchange_account = exchange_accounts[0]
 
+            if api_key:
+                exchange_account.api_key = api_key
+            if api_secret:
+                exchange_account.api_secret = api_secret
             if profit_margin:
                 exchange_account.profit_margin = profit_margin
             if stop_loss_trigger:
@@ -78,16 +82,18 @@ class ExchangeSettings(Resource):
                 'command': True,
                 'account_id': exchange_account.id
             }
-            resp = requests.post(app.config['BOT_ADDRESS'], json=params)
-            if not resp.status_code == 200:
-                response = {'message': "Ooops, we developed a problem handling the command"}
+            try:
+                resp = requests.post(app.config['BOT_ADDRESS'], json=params)
+                if not resp.status_code == 200:
+                    response = {'message': "Ooops, we developed a problem handling the command"}
+                    has_error = True
+                result = resp.json()
+                if not result['success']:
+                    response = {'message': 'something went wrong somewhere..'}
+                    has_error = True
+            except requests.exceptions.ConnectionError:
+                response = {'message': "The auto trader is currently inaccessible, will start your trades as soon as we make contact"}
                 has_error = True
-            result = resp.json()
-            if not result['success']:
-                response = {'message': 'something went wrong somewhere..'}
-                has_error = True
-
-
         else:
 
             exchange_account = ExchangeAccount(exchange=exchange, api_key=api_key, api_secret=api_secret)

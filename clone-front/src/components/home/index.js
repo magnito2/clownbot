@@ -7,29 +7,45 @@ import {PortfolioChart} from "../sub-components/portfolio.chart";
 
 class IndexPage extends Component {
 
-    constructor(props){
+    constructor(props) {
         super(props);
         this.state = {
-            exchange : "BINANCE",
+            exchange: "BINANCE",
             exchange_accounts: [],
-            portfolio: []
+            portfolio: {
+                labels : [],
+                portfolios : {
+                    'BINANCE': [],
+                    'BITTREX': []
+                },
+                loaded:false
+            }
+
         }
     }
     componentDidMount(){
         this.props.dispatch(ordersActions.getAll());
         this.props.dispatch(settingsActions.get());
+        this.props.dispatch(portfoliosActions.get())
     }
 
     componentWillReceiveProps(nextProps) {
 
-        if (this.state.exchange in nextProps.settings) {
-            const exchange_settings = nextProps.settings[this.state.exchange];
-            if (this.state.portfolio.length === 0 && nextProps.portfolio.list.length === 0) {
-                this.props.dispatch(portfoliosActions.get(exchange_settings.exchange_account_id))
+        let needs_update = false;
+        Object.keys(nextProps.portfolio.portfolios).map(exchange => {
+            if(!allDeepEqual([this.state.portfolio.portfolios[exchange], nextProps.portfolio.portfolios[exchange]])){
+                needs_update = true
             }
-        }
-        if (!allDeepEqual([this.state.portfolio, nextProps.portfolio.list])){
-            this.setState({portfolio : nextProps.portfolio.list});
+        });
+        if(needs_update){
+            this.setState({
+                portfolio: {
+                    ...this.state.portfolio,
+                    labels: nextProps.portfolio.labels,
+                    portfolios: nextProps.portfolio.portfolios,
+                    loaded: true
+                }
+            })
         }
     }
 
@@ -50,8 +66,8 @@ class IndexPage extends Component {
                                         <i class="zmdi zmdi-account-o"></i>
                                     </div>
                                     <div class="text">
-                                        <h2>0%</h2>
-                                        <span>growth</span>
+                                        <h2>My</h2>
+                                        <span>chart</span>
                                     </div>
                                     <div class="text pull-right">
                                         <form class="form-header" action="">
@@ -72,7 +88,9 @@ class IndexPage extends Component {
                                     </div>
                                 </div>
                                 <div class="overview-chart">
-                                    <PortfolioChart data={this.state.portfolio}/>
+                                    {
+                                        this.state.portfolio.loaded && <PortfolioChart labels={this.state.portfolio.labels} portfolios={this.state.portfolio.portfolios}/>
+                                    }
                                 </div>
                             </div>
                         </div>

@@ -9,11 +9,11 @@ export const portfoliosActions = {
     getBTCValues
 };
 
-function get(id) {
+function get() {
     return dispatch => {
         dispatch(request());
 
-        authorize().then(() => portfoliosService.get(id))
+        authorize().then(() => portfoliosService.get())
             .then(
                 portfolio => dispatch(success(portfolio)),
                 error => dispatch(failure(error.toString()))
