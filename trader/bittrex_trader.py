@@ -125,16 +125,19 @@ class HandleSocket(BittrexSocket):
 class BittrexTrader(Trader):
 
     def __init__(self, **kwargs):
-        Trader.__init__(self, **kwargs)
-        self.account = Bittrex(kwargs.get('api_key'), kwargs.get('api_secret'))
-        self._exchange = 'BITTREX'
-        self.percent_size = kwargs.get('percent_size') if kwargs.get('percent_size') < 1 else kwargs.get('percent_size')/100
-        self.profit_margin = kwargs.get('profit_margin') if kwargs.get('profit_margin') < 1 else kwargs.get('profit_margin')/100
-        self.streamer = HandleSocket()
-        self.streamer.authenticate(kwargs.get('api_key'), kwargs.get('api_secret'))
-        self.active_symbols = [] #list of symbols that are currently trading {'symbol': 'BTC-USDT', 'buy_price':xxx, 'order_id': xxx, 'latest_price': xxx}
-        logger.info('Bittrex trader successfully booted')
-        self.streamer.trader = self
+        try:
+            Trader.__init__(self, **kwargs)
+            self.account = Bittrex(kwargs.get('api_key'), kwargs.get('api_secret'))
+            self._exchange = 'BITTREX'
+            self.percent_size = kwargs.get('percent_size') if kwargs.get('percent_size') < 1 else kwargs.get('percent_size')/100
+            self.profit_margin = kwargs.get('profit_margin') if kwargs.get('profit_margin') < 1 else kwargs.get('profit_margin')/100
+            self.streamer = HandleSocket()
+            self.streamer.authenticate(kwargs.get('api_key'), kwargs.get('api_secret'))
+            self.active_symbols = [] #list of symbols that are currently trading {'symbol': 'BTC-USDT', 'buy_price':xxx, 'order_id': xxx, 'latest_price': xxx}
+            logger.info('Bittrex trader successfully booted')
+            self.streamer.trader = self
+        except Exception as e:
+            logger.exception(e)
 
     @run_in_executor
     def create_order(self, **kwargs):

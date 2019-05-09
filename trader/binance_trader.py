@@ -10,16 +10,20 @@ binance.__log_enabled = True
 class BinanceTrader(Trader):
 
     def __init__(self, **kwargs):
-        Trader.__init__(self, **kwargs)
-        self.account = binance.Account(kwargs.get('api_key'), kwargs.get('api_secret'))
-        self._exchange = 'BINANCE'
-        self.streamer = binance.Streamer()
-        self.streamer.start_user(kwargs.get('api_key'), self.process_user_socket_message)
+        try:
+            Trader.__init__(self, **kwargs)
+            self.account = binance.Account(kwargs.get('api_key'), kwargs.get('api_secret'))
+            self._exchange = 'BINANCE'
+            self.streamer = binance.Streamer()
+            self.streamer.start_user(kwargs.get('api_key'), self.process_user_socket_message)
 
-        self.exchange_info = binance.exchange_info()
+            self.exchange_info = binance.exchange_info()
 
-        self.active_symbols = [] #list of symbols that are currently trading {'symbol': 'BTCUSDT', 'buy_price':xxx, 'order_id': xxx, 'latest_price': xxx}
-        logger.info('Binance trader successfully booted')
+            self.active_symbols = [] #list of symbols that are currently trading {'symbol': 'BTCUSDT', 'buy_price':xxx, 'order_id': xxx, 'latest_price': xxx}
+            logger.info('Binance trader successfully booted')
+        except Exception as e:
+            logger.exception(e)
+
 
     @run_in_executor
     def create_order(self, **kwargs):
