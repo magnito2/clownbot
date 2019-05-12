@@ -33,11 +33,15 @@ export function authentication(state = initialState, action) {
         case userConstants.AUTH_TOKEN_REFRESH_FAILURE:
             console.log("Failed to refresh token ", action.error);
             return {};
-
+        case userConstants.REGISTER_REQUEST:
+            return {
+                ...state,
+                loggingIn: true,
+            }
         case userConstants.REGISTER_SUCCESS:
             return {
                 user: action.user.user,
-                tokens: action.user.tokens
+                tokens: action.user.tokens,
             };
 
         default:

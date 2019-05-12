@@ -267,7 +267,10 @@ class BinanceTrader(Trader):
 
         if not asset_balance:
             return {'error': True, 'message': 'Zero account balance'}
-        budget = asset_balance * self.percent_size
+        if self.btc_per_order:
+            budget = self.btc_per_order
+        else:
+            budget = asset_balance * self.percent_size
         amount_to_buy = budget/price
 
         if amount_to_buy < minQty:

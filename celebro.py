@@ -45,6 +45,10 @@ class Celebro:
                         'fixed_amount_per_order': account.fixed_amount_per_order,
                         'exchange_account_model_id': account.id
                     }
+                    valid = self.validate_account_model_params(kwargs)
+                    if not valid:
+                        logger.error(f'[!] Account {account.id} is invalid. cannot trade')
+                        continue
                     kwargs['subscribed_signals'].append('ManualOrder')
                     binance_trader = BinanceTrader(**kwargs)
                     self.exchange_traders.append(binance_trader)
@@ -65,6 +69,11 @@ class Celebro:
                         'fixed_amount_per_order': account.fixed_amount_per_order,
                         'exchange_account_model_id': account.id
                     }
+
+                    valid = self.validate_account_model_params(kwargs)
+                    if not valid:
+                        logger.error(f'[!] Account {account.id} is invalid. cannot trade')
+                        continue
                     kwargs['subscribed_signals'].append('ManualOrder')
                     bittrex_trader = BittrexTrader(**kwargs)
                     self.exchange_traders.append(bittrex_trader)
@@ -73,12 +82,20 @@ class Celebro:
             session.add(startup)
             session.commit()
 
+    def validate_account_model_params(self, kwargs):
+        for key in ['api_key', 'api_secret', 'percent_size', 'profit_margin', 'order_timeout']:
+            if kwargs[key] == None:
+                return False
+        if kwargs['percent_size'] == None:
+            if not kwargs['use_fixed_amount_per_order'] and kwargs['fixed_amount_per_order']:
+                return False
+        return True
+
     async def run(self):
         '''
         Main loop.
         :return:
         '''
-
 
         binance_trader_queues = [trader.orders_queue for trader in self.exchange_traders if trader._exchange == "BINANCE"]
         bittrex_traders_queues = [trader.orders_queue for trader in self.exchange_traders if trader._exchange == "BITTREX"]

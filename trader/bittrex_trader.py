@@ -353,7 +353,11 @@ class BittrexTrader(Trader):
         base_asset_bal = float(base_asset_bal_raw)
         logger.debug(f"[+] The bal of {base_asset} is {base_asset_bal}")
 
-        budget = base_asset_bal * self.percent_size #check on deminishing account as more orders are placed
+        if self.btc_per_order:
+            budget = self.btc_per_order
+        else:
+            budget = base_asset_bal * self.percent_size #check on deminishing account as more orders are placed
+
         if budget < 0.001:
             logger.warning(f"[+] Order size is below minimum trade size of 0.0005BTC. order size is {budget}, adjusting to 0.0005BTC")
             budget = 0.001

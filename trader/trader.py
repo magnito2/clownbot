@@ -23,7 +23,8 @@ class Trader:
     def __init__(self, **kwargs):
         self._exchange = '' #use this to separate binance from bittrex, create separate for each
         self.orders_queue = asyncio.Queue()
-        self.percent_size = kwargs.get('percent_size') if kwargs.get('percent_size') < 1 else kwargs.get('percent_size') / 100
+        self.percent_size = None
+        self.btc_per_order = None
         self.profit_margin = kwargs.get('profit_margin') if kwargs.get('profit_margin') < 1 else kwargs.get('profit_margin') / 100
         self.order_timeout = kwargs.get('order_timeout')
         self.stop_loss_trigger = kwargs.get('stop_loss_trigger')
@@ -40,6 +41,11 @@ class Trader:
         self.portfolio_update_interval = kwargs.get('portfolio_update_interval', 300)
         self.keep_running = True
         self.api_key = kwargs.get('api_key')
+
+        if kwargs.get('use_fixed_amount_per_order'):
+            self.btc_per_order = kwargs.get('fixed_amount_per_order')
+        if kwargs.get('percent_size'):
+            self.percent_size = kwargs.get('percent_size') if kwargs.get('percent_size') < 1 else kwargs.get('percent_size') / 100
 
     async def run(self):
         '''

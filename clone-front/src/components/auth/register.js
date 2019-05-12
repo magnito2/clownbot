@@ -3,6 +3,7 @@ import { connect } from "react-redux";
 import {userActions} from "../../actions";
 import { Link } from 'react-router-dom';
 import {AuthWrapper} from "./wrapper";
+import {Spinner} from "../sub-components/spinner";
 
 export class Register extends Component {
 
@@ -54,7 +55,7 @@ export class Register extends Component {
 
     render(){
 
-        const { registering  } = this.props;
+        const { logginIn  } = this.props;
         const { user, submitted } = this.state;
 
         return (
@@ -101,10 +102,7 @@ export class Register extends Component {
                                         <input type="checkbox" name="aggree"/>Agree the terms and policy
                                     </label>
                                 </div>
-                                <button class="au-btn au-btn--block au-btn--green m-b-20" type="submit">register</button>
-                                {registering &&
-                                <img src="data:image/gif;base64,R0lGODlhEAAQAPIAAP///wAAAMLCwkJCQgAAAGJiYoKCgpKSkiH/C05FVFNDQVBFMi4wAwEAAAAh/hpDcmVhdGVkIHdpdGggYWpheGxvYWQuaW5mbwAh+QQJCgAAACwAAAAAEAAQAAADMwi63P4wyklrE2MIOggZnAdOmGYJRbExwroUmcG2LmDEwnHQLVsYOd2mBzkYDAdKa+dIAAAh+QQJCgAAACwAAAAAEAAQAAADNAi63P5OjCEgG4QMu7DmikRxQlFUYDEZIGBMRVsaqHwctXXf7WEYB4Ag1xjihkMZsiUkKhIAIfkECQoAAAAsAAAAABAAEAAAAzYIujIjK8pByJDMlFYvBoVjHA70GU7xSUJhmKtwHPAKzLO9HMaoKwJZ7Rf8AYPDDzKpZBqfvwQAIfkECQoAAAAsAAAAABAAEAAAAzMIumIlK8oyhpHsnFZfhYumCYUhDAQxRIdhHBGqRoKw0R8DYlJd8z0fMDgsGo/IpHI5TAAAIfkECQoAAAAsAAAAABAAEAAAAzIIunInK0rnZBTwGPNMgQwmdsNgXGJUlIWEuR5oWUIpz8pAEAMe6TwfwyYsGo/IpFKSAAAh+QQJCgAAACwAAAAAEAAQAAADMwi6IMKQORfjdOe82p4wGccc4CEuQradylesojEMBgsUc2G7sDX3lQGBMLAJibufbSlKAAAh+QQJCgAAACwAAAAAEAAQAAADMgi63P7wCRHZnFVdmgHu2nFwlWCI3WGc3TSWhUFGxTAUkGCbtgENBMJAEJsxgMLWzpEAACH5BAkKAAAALAAAAAAQABAAAAMyCLrc/jDKSatlQtScKdceCAjDII7HcQ4EMTCpyrCuUBjCYRgHVtqlAiB1YhiCnlsRkAAAOwAAAAAAAAAAAA==" />
-                                }
+                                <button class="au-btn au-btn--block au-btn--green m-b-20" type="submit"><Spinner loading={logginIn}/> register</button>
                             </form>
                             <div class="register-link">
                                 <p>
@@ -121,9 +119,9 @@ export class Register extends Component {
 }
 
 function mapStateToProps(state) {
-    const { registering } = state.authentication;
+    const { logginIn } = state.authentication;
     return {
-        registering
+        logginIn
     };
 }
 
