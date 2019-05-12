@@ -68,7 +68,6 @@ class SettingsForm extends Component{
                 this.setState({account_exists: true});
             }
             else{
-                alert('account does not exist');
                 return
             }
             if (exchange_settings.api_key !== this.state.api_key) {

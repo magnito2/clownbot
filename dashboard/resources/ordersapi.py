@@ -32,5 +32,7 @@ class OrdersAPI(Resource):
             if not Order or not order in user.orders:
                 abort(404)
             return order.serialize()
-        orders = [order.serialize() for order in user.orders]
-        return orders
+        if user.orders:
+            orders = [order.serialize() for order in user.orders]
+            return orders
+        return []

@@ -22,7 +22,7 @@ export function settings(state = initialState, action) {
             return {
                 ...state,
                 loading : false,
-                
+
             };
         case settingsConstants.CREATE_FAILURE:
             return {
