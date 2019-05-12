@@ -1,7 +1,7 @@
 from bittrex.bittrex import *
 from bittrex_websocket.websocket_client import BittrexSocket, BittrexMethods
 from trader.trader import Trader
-import logging
+import logging, time
 from utils import run_in_executor
 from datetime import datetime
 
@@ -47,7 +47,7 @@ class HandleSocket(BittrexSocket):
                 'order_time':order_res.get('Y'),
                 'cummulative_filled_quantity': float(order_res.get('Q')) - float(order_res.get('q')),
                 'cummulative_quote_asset_transacted':'',
-                'status':''
+                'status': order_types[int(msg.get('TY'))]
             }
 
             order_params = {
@@ -191,15 +191,36 @@ class BittrexTrader(Trader):
             return {'error': True, 'message': f'Side {side} is not a BUY or SELL'}
         if resp['success']:
             order_uuid = resp['result']['uuid']
-            order_resp = self.account.get_order(uuid=order_uuid)
-            if resp['success']:
-                res = resp['result']
-                logger.info(f"[+] Fetched order params, order params {res}")
-                _params = {
-                    'exchange': 'Bittrex',
+
+            if side == "BUY":
+                params = {
+                    'exchange': self._exchange,
                     'symbol': symbol,
+                    'buy_order_id': order_uuid,
+                    'buy_time': None,
+                    'quote_asset': quantity_resp['quote'],
+                    'base_asset': quantity_resp['base'],
+                    'buy_price': price,
+                    'buy_quantity': quantity,
+                    'buy_status': 'NEW',
+                    'side': 'BUY'
                 }
-                return {'error': False, 'result': _params}
+                return {'error': False, 'result': params}
+
+            if side == "SELL":
+                params = {
+                    'exchange': self._exchange,
+                    'symbol': symbol,
+                    'sell_order_id': order_uuid,
+                    'sell_time': None,
+                    'sell_price': price,
+                    'sell_quantity': quantity,
+                    'sell_status': 'NEW',
+                    'side': 'SELL',
+                    'buy_order_id': kwargs.get('buy_order_id')
+                }
+                return {'error': False, 'result': params}
+
         return {'error': True, 'message': resp['message']}
 
     async def warmup(self):
@@ -208,6 +229,10 @@ class BittrexTrader(Trader):
             balances_resp = await self.get_asset_balances()
             if balances_resp['error']:
                 logger.error(f"[!] {balances_resp['message']}")
+                if balances_resp['message'] == 'APIKEY_INVALID':
+                    await self.invalidate_keys()
+                    self.keep_running = False
+                    return
             balances = balances_resp['result']
             print("\n")
             await self.print_asset_balances(balances)
@@ -232,22 +257,60 @@ class BittrexTrader(Trader):
             for order in open_orders:
                 logger.info(f"[+] Adding {order['Exchange']} to active symbols")
                 self.streamer.add_trades(order['Exchange'], self.process_symbol_stream)
+                _params = {
+                    'exchange': self._exchange,
+                    'order_id': order['OrderUuid'],
+                    'client_order_id': order['OrderUuid'],
+                    'symbol': order['Exchange'],
+                    'price': order['Limit'],
+                    'quantity': order['Quantity'],
+                    'type': order['OrderType'],
+                    'side': order['OrderType'],
+                    'order_time': order['Opened'],
+                    'cummulative_filled_quantity': float(order['Quantity']) - float(order['QuantityRemaining']),
+                    'status': 'FILLED' if order['Closed'] else 'NEW',
+                    'timestamp': order.get('TimeStamp')
+                }
+                await self.update_order_model(**_params)
 
             order_history_resp = await self.get_recent_orders()
             if order_history_resp['error']:
                 logger.error(f"[!] {order_history_resp['message']}")
             order_history = order_history_resp.get('result')
+
+            for order in order_history:
+                print(f"Order Order order")
+                print(order)
+                print("End order\n")
+                _params = {
+                    'exchange': self._exchange,
+                    'order_id': order['OrderUuid'],
+                    'client_order_id': order['OrderUuid'],
+                    'symbol': order['Exchange'],
+                    'price': order['Price'],
+                    'quantity': order['Quantity'],
+                    'type': order['OrderType'],
+                    'side': order['OrderType'],
+                    'order_time': datetime.strptime(f"{order['TimeStamp']}Z",'%Y-%m-%dT%H:%M:%S.%fZ'),
+                    'cummulative_filled_quantity': float(order['Quantity']) - float(order['QuantityRemaining']),
+                    'status': 'FILLED' if order['Closed'] else 'NEW',
+                    'timestamp': order.get('TimeStamp')
+                }
+                await self.update_order_model(**_params)
+
             for asset in balances:
                 logger.debug(f"asset {asset}")
                 if asset['Currency'] == "BTC":
                     continue
                 asset_name = asset['Currency']
                 symbol = f"BTC-{asset_name}"
+                buy_order_id = None
                 symbol_buy_orders = [order for order in order_history if asset_name in order['Exchange'] and order['OrderType'] == "LIMIT_BUY"]
                 if symbol_buy_orders:
                     last_buy_order = max(symbol_buy_orders, key=lambda x: int(datetime.strptime(f"{x['TimeStamp']}Z",'%Y-%m-%dT%H:%M:%S.%fZ').timestamp()))
                     buy_price = last_buy_order['Price']
                     symbol = last_buy_order['Exchange']
+                    buy_order_id = last_buy_order['OrderUuid']
                     logger.info(f"[+] Buy price for {symbol} is {buy_price}")
                 else:
                     logger.info("[!] Did not find the symbol in the orderbook, getting the market price.")
@@ -265,6 +328,7 @@ class BittrexTrader(Trader):
                     'exchange': self._exchange,
                     'side': 'SELL',
                     'price': float(buy_price) * (1 + self.profit_margin),
+                    'buy_order_id': buy_order_id
                 }
                 await self.orders_queue.put(order_params)
 
@@ -290,17 +354,17 @@ class BittrexTrader(Trader):
         logger.debug(f"[+] The bal of {base_asset} is {base_asset_bal}")
 
         budget = base_asset_bal * self.percent_size #check on deminishing account as more orders are placed
-        if budget < 0.0005:
+        if budget < 0.001:
             logger.warning(f"[+] Order size is below minimum trade size of 0.0005BTC. order size is {budget}, adjusting to 0.0005BTC")
-            budget = 0.00051
+            budget = 0.001
         if budget > float(base_asset_bal_res['result']['Available']):
             logger.error("[+] Budget is greater than available account balance")
-            if float(base_asset_bal_res['result']['Available']) * 0.9975 > 0.0005:
+            if float(base_asset_bal_res['result']['Available']) * 0.9975 > 0.001:
                 budget = float(base_asset_bal_res['result']['Available']) * 0.9975
             else:
                 return {'error': True, 'message': f'account balance not sufficient to place order, account balance {base_asset_bal_res["result"]["Available"]}, minimum order size 0.0005'}
         amount_to_buy = budget / price
-        return {'error': False, 'size': f"{amount_to_buy:.6f}"}
+        return {'error': False, 'size': f"{amount_to_buy:.6f}", 'quote':base_asset, 'base': symbol_info['MarketCurrency']}
 
     async def sync_db(self):
         try:
@@ -350,7 +414,7 @@ class BittrexTrader(Trader):
             return {'error': True, 'message': quote_asset_bal_res['message']}
         quote_asset_bal = quote_asset_bal_res['result']['Available']
         logger.debug(f"[+] The bal of {quote_asset} is {quote_asset_bal}")
-        return {'error': False, 'size': quote_asset_bal}
+        return {'error': False, 'size': quote_asset_bal, 'base': quote_asset}
 
     #@run_in_executor
     def cancel_order(self, symbol, id):
@@ -373,7 +437,41 @@ class BittrexTrader(Trader):
         delta = msg.get('delta')
         if delta == "ORDER":
             del msg['delta']
-            self.update_order_model(**msg)
+            await self.update_order_model(**msg)
+
+            if msg['side'] == 'BUY' and msg['type'] in ['PARTIAL', 'FILL']:
+                buy_price = msg['price']
+                symbol = msg['symbol']
+                logger.info(f"[+] Creating a sell order for {msg['symbol']}")
+                order_params = {
+                    'price': float(buy_price) * (1 + self.profit_margin),
+                    'symbol': symbol,
+                    'exchange': self._exchange,
+                    'side': 'SELL',
+                    'buy_order_id': msg['client_order_id']
+                }
+                await self.orders_queue.put(order_params)
+
+            if msg['side'] == 'BUY':
+                trade_params = {
+                    'exchange': self._exchange,
+                    'buy_order_id': msg['client_order_id'],
+                    'symbol':msg['symbol'],
+                    'buy_quantity_executed': msg['cummulative_filled_quantity'],
+                    'buy_status': msg['status']
+                }
+            elif msg['side'] == 'SELL':
+                trade_params = {
+                    'exchange': self._exchange,
+                    'sell_order_id': msg['client_order_id'],
+                    'symbol': msg['symbol'],
+                    'sell_quantity_executed': msg['cummulative_filled_quantity'],
+                    'sell_status': msg['status']
+                }
+            else:
+                logger.error(f"[!] Side {msg['side']} is not known")
+                return
+            await self.update_trade(**trade_params)
 
         elif delta == "BALANCE":
             asset = msg
@@ -388,6 +486,7 @@ class BittrexTrader(Trader):
                 }
             await self.update_asset_balance(balance_model_msg)
 
+            '''
             open_orders_resp = await self.get_open_orders()
             if open_orders_resp['error']:
                 logger.error(f"[!] {open_orders_resp['message']}")
@@ -428,7 +527,7 @@ class BittrexTrader(Trader):
                     }
                     await self.orders_queue.put(order_params)
                     return
-
+            '''
 
     @run_in_executor
     def get_asset_balances(self):
@@ -505,13 +604,10 @@ class BittrexTrader(Trader):
         try:
             orders_res = await self.get_open_orders()
             if orders_res['error']:
-                print("-"*100)
-                print("*"*100)
-                print("_"*100)
                 logger.error(orders_res['message'])
                 return
             orders = orders_res['result']
-            await self.print_open_orders(orders)
+            #await self.print_open_orders(orders)
             logger.info("[+] Checking for expired orders and stop lossed orders")
 
             recent_orders_resp = await self.get_recent_orders()
@@ -530,27 +626,36 @@ class BittrexTrader(Trader):
                 #check for stop loss condition, applies to sell orders only.
                 if order['OrderType'] == "LIMIT_SELL":
                     symbol = order['Exchange']
-                    for closed_order in closed_orders:
-                        if closed_order['Exchange'] == symbol and closed_order['OrderType'] == "LIMIT_BUY": #complementary buy order
-                            buy_price = float(closed_order['Price'])
-                            if not buy_price:
-                                logger.error(f"[!] Closed order must have price, please check {closed_order}")
-                                continue
-                            symbol_market_price = self.active_symbol_prices.get(symbol)
-                            if not symbol_market_price:
-                                symbol_market_price = await self.get_last_price(symbol)
-                                if symbol_market_price['error']:
-                                    logger.error(f"[!] {symbol_market_price['message']}")
-                                    continue
-                                symbol_market_price = float(symbol_market_price['result']['price'])
-                            if symbol_market_price < buy_price - self.stop_loss_trigger: #we've gone below our stop loss
-                                logger.info(f"[!] {symbol} Price has gone below stop loss, placing a stop loss sell. buy price {buy_price}, market price {symbol_market_price}")
-                                order_params = {
-                                    'price' : symbol_market_price * 0.99,
-                                    'symbol': symbol,
-                                    'exchange': self._exchange,
-                                    'side': 'SELL',
-                                }
-                                await self.orders_queue.put(order_params)
+                    order_id = order['OrderUuid']
+                    trade_model = await self.get_trade_model(sell_order_id=order_id)
+                    if not trade_model:
+                        continue
+                    buy_price = trade_model.buy_price
+                    symbol_market_price = self.active_symbol_prices.get(symbol)
+                    if not symbol_market_price:
+                        symbol_market_price = await self.get_last_price(symbol)
+                        if symbol_market_price['error']:
+                            logger.error(f"[!] {symbol_market_price['message']}")
+                            continue
+                        symbol_market_price = float(symbol_market_price['result']['price'])
+                    if symbol_market_price < buy_price - self.stop_loss_trigger:  # we've gone below our stop loss
+                        logger.info(
+                            f"[!] {symbol} Price has gone below stop loss, placing a stop loss sell. buy price {buy_price}, market price {symbol_market_price}")
+                        order_params = {
+                            'price': symbol_market_price * 0.99,
+                            'symbol': symbol,
+                            'exchange': self._exchange,
+                            'side': 'SELL',
+                            'buy_order_id': trade_model.buy_order_id
+                        }
+                        await self.orders_queue.put(order_params)
+
         except Exception as e:
             logger.exception(e)
+
+    @run_in_executor
+    def validate_keys(self):
+        balances_resp = self.account.get_balances()
+        if not balances_resp['success'] and balances_resp['message'] == 'APIKEY_INVALID':
+            return {'error': True, 'message': balances_resp['message']}
+        return {'error': False, 'message': 'API Key is valid'}

@@ -2,7 +2,7 @@ from flask_restful import Resource, reqparse, abort
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from .. import db, user_datastore, app
 from dashboard.models import ExchangeAccount
-import requests
+import requests, re
 
 parser = reqparse.RequestParser()
 parser.add_argument('exchange')
@@ -47,15 +47,17 @@ class ExchangeSettings(Resource):
         use_fixed_amount_per_order = args.get('use_fixed_amount_per_order')
 
         has_error = False
+        response = ''
 
         exchange_accounts = [account for account in user.exchange_accounts if account.exchange == exchange]
         if exchange_accounts:
             exchange_account = exchange_accounts[0]
 
-            if api_key:
+            if api_key and not exchange_account.api_key == api_key:
                 exchange_account.api_key = api_key
             if api_secret:
-                exchange_account.api_secret = api_secret
+                if not re.search("^\*+\*$",api_secret) and not exchange_account.api_secret == api_secret:
+                    exchange_account.api_secret = api_secret
             if profit_margin:
                 exchange_account.profit_margin = profit_margin
             if stop_loss_trigger:
@@ -87,10 +89,11 @@ class ExchangeSettings(Resource):
                 if not resp.status_code == 200:
                     response = {'message': "Ooops, we developed a problem handling the command"}
                     has_error = True
-                result = resp.json()
-                if not result['success']:
-                    response = {'message': 'something went wrong somewhere..'}
-                    has_error = True
+                else:
+                    result = resp.json()
+                    if not result['success']:
+                        response = {'message': 'something went wrong somewhere..'}
+                        has_error = True
             except requests.exceptions.ConnectionError:
                 response = {'message': "The auto trader is currently inaccessible, will start your trades as soon as we make contact"}
                 has_error = True
@@ -102,5 +105,5 @@ class ExchangeSettings(Resource):
             response = {"action": "get-settings", "message": "Now set up some options you want to use"}
 
         if has_error:
-            abort(500, message=response.get('message'))
+            abort(401, message=response.get('message'))
         return response

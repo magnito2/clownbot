@@ -50,6 +50,11 @@ class SignalsAPI(Resource):
 
             db.session.commit()
 
+            signals = exchange_account.signals
+            resp = [signal.name for signal in signals]
+            print(f"[+] Signals are {resp}")
+            return resp
+
 class CheckedSignalsAPI(Resource):
 
     @jwt_required

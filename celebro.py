@@ -21,7 +21,7 @@ class Celebro:
 
     def __init__(self, config):
 
-        logger.debug('celebro is booting up')
+        logger.info('***** clown bot celebro starting *****')
 
         self.exchange_traders = []
         with create_session() as session:
@@ -90,11 +90,9 @@ class Celebro:
         for trader in self.exchange_traders: #pass tg_client message queue to every traderxc
             trader.outgoing_message_queue = self.tg_client.outgoing_messages_queue
 
-        print("[+] Starting the traders")
-
         consumers = [asyncio.create_task(trader.run()) for trader in self.exchange_traders]
         asyncio.create_task(self.tg_client.send_message_loop()) #task to process message loop. part of consumers, so should be implicitly awaited
-        print("[+] Adding Http signal reciever")
+
         self.http_signal_handler = HttpSignalReciever(binance_trader_queues, bittrex_traders_queues)
         self.http_signal_handler_task = asyncio.create_task(self.http_signal_handler.run())
 
@@ -172,18 +170,16 @@ class Celebro:
             asyncio.create_task(trader.run())
 
     async def remove_account(self, account_id):
-        trader_l = [trader for trader in self.exchange_traders if trader.account_model_id == account_id]
-        if trader_l:
-            trader = trader_l[0]
-            trader.keep_running = False
-            if trader._exchange == "BINANCE":
-                self.tg_client.binance_queues.remove(trader.orders_queue)
-                self.http_signal_handler.binance_queues.remove(trader.orders_queue)
-            elif trader._exchange == "BITTREX":
-                self.tg_client.bittrex_queues.remove(trader.orders_queue)
-
-                #self.http_signal_handler.bittrex_queues.remove(trader.orders_queue)
-            self.exchange_traders.remove(trader)
+        for trader in self.exchange_traders:
+            if trader.account_model_id == account_id:
+                trader.keep_running = False
+                if trader._exchange == "BINANCE":
+                    self.tg_client.binance_queues.remove(trader.orders_queue)
+                    #self.http_signal_handler.binance_queues.remove(trader.orders_queue)
+                elif trader._exchange == "BITTREX":
+                    self.tg_client.bittrex_queues.remove(trader.orders_queue)
+                    #self.http_signal_handler.bittrex_queues.remove(trader.orders_queue)
+                self.exchange_traders.remove(trader)
 
 
     async def reload_account(self, account_id):

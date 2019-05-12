@@ -26,3 +26,4 @@ class ExchangeAccount(Base):
     signals = relationship('Signal', secondary=exchange_accounts_signals, backref='exchange_account')
     portfolio = relationship('Portfolio', backref='exchange_account', lazy=True)
     manual_orders = relationship('ManualOrder', backref='exchange_account', lazy=True)
+    valid_keys = Column(Boolean)

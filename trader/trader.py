@@ -8,17 +8,6 @@ from utils import run_in_executor
 
 logger = logging.getLogger('clone.trader')
 
-KEYS = {
-    'binance': {
-        'api_key': 'JeJMOBGQqGhFNmKp4szrgrTuHdETrtngq9EwxgV84TZiojhzcy3GW8QQc8YEXTE5',
-        'secret_key': 'VV9p8cLqlUiw9bdql8OPDmoHMKVBjDs7YPvYIJs1FiocR5JHPceleF2a0g2vrzML'
-    },
-    'bittrex': {
-        'api_key': '26d765d60cc7457695a0176a6bf3ff43',
-        'secret_key': '2fdb68a632ef405cb560ea7862940877'
-    }
-}
-
 class Trader:
     '''
     Manage 3 queues, updated from outside sources,
@@ -50,6 +39,7 @@ class Trader:
         self.last_portfolio_update_time = datetime.utcnow()
         self.portfolio_update_interval = kwargs.get('portfolio_update_interval', 300)
         self.keep_running = True
+        self.api_key = kwargs.get('api_key')
 
     async def run(self):
         '''
@@ -57,15 +47,17 @@ class Trader:
         :return:
         1. stream for account events, tell when a trade has occured
         '''
-        if self.outgoing_message_queue and self.user_tg_id:
-            logger.info(f"[+] Informing user on bot status")
-            await self.outgoing_message_queue.put(
-                {'id': self.user_tg_id, 'message': f'The bot has been started, you will be recieving updates now'})
-        else:
-            logger.error(f"[+] TG not set up properly")
+        await self.send_notification(f'U+1F916 {self._exchange} bot has been started, you will be recieving updates now')
+
+        is_valid = await self._validate_keys()
+        if not is_valid:
+            await self.send_notification(f"[!] The API key and Secret for {self._exchange} is INVALID. Please provide valid keys.")
+            logging.error(f"[!] Invalid Keys provide for account {self._exchange} - {self.api_key}")
+            return
 
         await self.warmup()
-        logger.info(f"[+] Entering the main loop of {self._exchange}")
+
+        logger.info(f"[+] Entering the main loop")
         while self.keep_running:
             logger.info(f"[+] {self._exchange} Awaiting the next order")
             try:
@@ -73,7 +65,7 @@ class Trader:
                 logger.info(f"{self._exchange} recieved {_params}")
                 if _params and 'exchange' in _params:
                     order_params = _params
-                    logger.debug(f'[+] Recieved new order parameters {order_params}')
+                    logger.debug(f'[+] Recieved new order parameters')
                     if not type(order_params) is dict:
                         logger.error(f"Supported parameters should be dictionary, got {order_params} of type {type(order_params)}")
                         continue
@@ -85,7 +77,7 @@ class Trader:
                         resp = await self.create_order(**order_params)
                         if resp['error']:
                             logger.error(resp['message'])
-                            await self.send_notification(f"Attempt to create an order failed because {resp['message']}")
+                            await self.send_notification(f"U+1F621 , Attempt to create an order failed because {resp['message']}")
                             continue
                         logger.info(resp)
                         result = resp['result']
@@ -209,6 +201,16 @@ class Trader:
                 return []
 
     @run_in_executor
+    def get_trade_model(self, buy_order_id=None, sell_order_id=None):
+        with create_session() as session:
+            trade = None
+            if buy_order_id:
+                trade = session.query(Trade).filter_by(buy_order_id=buy_order_id).first()
+            elif sell_order_id:
+                trade = session.query(Trade).filter_by(sell_order_id=sell_order_id).first()
+            return trade
+
+    @run_in_executor
     def get_asset_models(self, asset = None):
         with create_session() as session:
             if asset:
@@ -254,9 +256,6 @@ class Trader:
     @run_in_executor
     def update_portfolio_model(self, portfolio):
         with create_session() as session:
-            print("="*150)
-            print(f"{self._exchange} New portfolio is {portfolio}")
-            print("=" * 150)
             portfolio_model = Portfolio(btc_value=portfolio)
             account_model = session.query(ExchangeAccount).filter_by(id=self.account_model_id).first()
             account_model.portfolio.append(portfolio_model)
@@ -283,14 +282,30 @@ class Trader:
 
     @run_in_executor
     def update_trade(self, **kwargs):
-        client_order_id = kwargs.get('client_order_id')
         with create_session() as session:
-            trade = session.query(Trade).filter_by(client_order_id=client_order_id).first()
-            if trade:
-                session.query(Trade).filter_by(client_order_id=client_order_id).update(kwargs)
-            else:
-                trade = Trade(**kwargs)
-                session.add(trade)
+            side = kwargs.get('side')
+            buy_order_id = kwargs.get('buy_order_id')
+            if side == 'BUY':
+                if not buy_order_id:
+                    logger.error('[!] Include buy order id')
+                trade = session.query(Trade).filter_by(buy_order_id=buy_order_id).first()
+                if trade:
+                    session.query(Trade).filter_by(buy_order_id=buy_order_id).update(kwargs)
+                else:
+                    trade = Trade(**kwargs)
+                    session.add(trade)
+
+            elif side == 'SELL':
+                if buy_order_id:
+                    trade = session.query(Trade).filter_by(buy_order_id=buy_order_id).first()
+                    if trade:
+                        session.query(Trade).filter_by(buy_order_id=buy_order_id).update(kwargs)
+                else:
+                    sell_order_id = kwargs.get('sell_order_id')
+                    if sell_order_id:
+                        trade = session.query(Trade).filter_by(sell_order_id=sell_order_id).first()
+                        if trade:
+                            session.query(Trade).filter_by(sell_order_id=sell_order_id).update(kwargs)
             session.commit()
 
     async def send_notification(self, notification):
@@ -327,3 +342,27 @@ class Trader:
             await self.update_portfolio_model(portfolio)
         except Exception as e:
             logger.exception(e)
+
+    async def _validate_keys(self):
+        resp = await self.validate_keys()
+        is_valid = True
+        if resp['error']:
+            is_valid = False
+        await self.update_validate_keys_model(is_valid)
+        return is_valid
+
+    async def validate_keys(self):
+        pass
+
+    async def invalidate_keys(self):
+        await self.update_validate_keys_model(False)
+        if self.keep_running:
+            self.keep_running = False
+
+    @run_in_executor
+    def update_validate_keys_model(self, is_valid):
+        with create_session() as session:
+            account_model = session.query(ExchangeAccount).filter_by(id=self.account_model_id).first()
+            account_model.valid_keys = is_valid
+            session.commit()
+

@@ -20,6 +20,7 @@ class ExchangeAccount(db.Model):
     signals = db.relationship('Signal', secondary=exchange_accounts_signals, backref='exchange_account')
     portfolio = db.relationship('Portfolio', backref='exchange_account', lazy=True)
     manual_orders = db.relationship('ManualOrder', backref='exchange_account', lazy=True)
+    valid_keys = db.Column(db.Boolean)
 
     def serialize(self):
         return {
@@ -36,7 +37,8 @@ class ExchangeAccount(db.Model):
             'receive_notifications': self.receive_notifications,
             'fixed_amount_per_order': self.fixed_amount_per_order,
             'use_fixed_amount_per_order': self.use_fixed_amount_per_order,
-            'portfolio_uri': f'/api/portfolio?exchange_account_id={self.id}'
+            'portfolio_uri': f'/api/portfolio?exchange_account_id={self.id}',
+            'valid_keys': self.valid_keys
         }
 
     def __repr__(self):

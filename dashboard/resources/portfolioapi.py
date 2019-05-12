@@ -42,7 +42,8 @@ class BTCValuesAPI(Resource):
                 btc_values = {
                     'exchange': account.exchange,
                     'btc_value': account.portfolio[-1].btc_value,
-                    'timestamp': account.portfolio[-1].timestamp.isoformat()
+                    'timestamp': account.portfolio[-1].timestamp.isoformat(),
+                    'is_active': account.valid_keys
                 }
                 portfolios.append(btc_values)
         return portfolios

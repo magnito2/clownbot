@@ -19,8 +19,7 @@ class BinanceTrader(Trader):
 
             self.exchange_info = binance.exchange_info()
 
-            self.active_symbols = [] #list of symbols that are currently trading {'symbol': 'BTCUSDT', 'buy_price':xxx, 'order_id': xxx, 'latest_price': xxx}
-            logger.info('Binance trader successfully booted')
+            self.active_symbols = []
         except Exception as e:
             logger.exception(e)
 
@@ -38,8 +37,6 @@ class BinanceTrader(Trader):
         side = kwargs.get('side')
         order_type = kwargs.get('type')
         price = kwargs.get('price')
-        logger.debug(f"[+] Trade params, side {side}, type {order_type}, price {price}")
-        logger.debug("[+] Getting the quantity")
         if side == "BUY":
             quantity_resp = self.get_buy_size(symbol, price)
             order_id = f"BUY_{uuid.uuid4()}"
@@ -48,7 +45,7 @@ class BinanceTrader(Trader):
             order_id = kwargs.get('order_id', f"SELL_{uuid.uuid4()}")
         else:
             return {'error': True, 'message': f'Side not understood, side was {side}, should be either BUY or SELL'}
-        logger.debug(f"[+] The quantity response is {quantity_resp}")
+
         if quantity_resp['error']:
             logger.error(quantity_resp['message'])
             return quantity_resp
@@ -110,10 +107,12 @@ class BinanceTrader(Trader):
         :return:
         '''
         try:
-            logger.info("[+] Starting to warm up")
+            logger.info("[+] Warming up")
             balances_resp = await self.get_asset_balances()
             if balances_resp['error']:
                 logger.error(f"[+] Error getting balances, {balances_resp['message']}")
+                if 'code' in balances_resp and balances_resp['code'] == -2015:
+                    await self.invalidate_keys()
                 return
             balances = balances_resp['result']
             bal_list = []
@@ -125,6 +124,7 @@ class BinanceTrader(Trader):
                 })
             await self.update_asset_balances(bal_list)
 
+
             for asset in balances:
                 if asset['asset'] == "BTC":
                     continue
@@ -132,12 +132,7 @@ class BinanceTrader(Trader):
 
                 last_saved_orders = await self.get_order_models()
                 symbol = f"{asset_name}BTC"
-                for quote in ['BTC','ETH','BNB','USDT']:
-                    sym = f"{asset_name}{quote}"
-                    last_order_l = [order for order in last_saved_orders if order.symbol == sym and order.side == "BUY"]
-                    if last_order_l:
-                        symbol = sym
-                        break
+                last_order_l = [order for order in last_saved_orders if order.symbol == symbol and order.side == "BUY"]
 
                 if last_order_l:
                     logger.info(f"[+] Orders found for symbol {symbol}, {last_order_l}")
@@ -158,6 +153,7 @@ class BinanceTrader(Trader):
 
                     for order in exchange_recent_orders:
                         order_model_params = {
+                            'exchange': self._exchange,
                             'order_id': order['orderId'],
                             'client_order_id': order['clientOrderId'],
                             'symbol': order['symbol'],
@@ -168,7 +164,8 @@ class BinanceTrader(Trader):
                             'order_time': datetime.fromtimestamp(int(order['time'])/1000),
                             'status': order['status'],
                             'cummulative_filled_quantity': order['executedQty'],
-                            'cummulative_quote_asset_transacted': order['cummulativeQuoteQty']
+                            'cummulative_quote_asset_transacted': order['cummulativeQuoteQty'],
+                            'timestamp': datetime.fromtimestamp(int(order['time'])/1000)
                         }
                         await self.update_order_model(**order_model_params)
 
@@ -206,6 +203,11 @@ class BinanceTrader(Trader):
                         'order_id': order_id
                     }
                 await self.orders_queue.put(order_params)
+        except binance.BinanceError as e:
+            if e.code in [-2014, -2015]:
+                await self.invalidate_keys()
+                self.keep_running = False
+                return
         except Exception as e:
             logger.exception(e)
 
@@ -238,14 +240,14 @@ class BinanceTrader(Trader):
         symbol_info = symbol_info_res['result']
         symbol_filters = symbol_info['filters']
         quote_asset = symbol_info['quoteAsset']
-        logger.debug(f"[+] Quote Asset is {quote_asset}")
+
         lot_filter_list = [sym_filter for sym_filter in symbol_filters if sym_filter['filterType'] == "LOT_SIZE"]
         if not lot_filter_list:
             return {'error': True, 'message': 'Symbol has no Lot Size Filter'}
         lot_filter = lot_filter_list[0]
         minQty = float(lot_filter['minQty'])
         stepSize = float(lot_filter['stepSize'])
-        logger.debug(f"[+] minQty {minQty} and stepSize {stepSize}")
+
 
         min_notional_filter_list = [sym_filter for sym_filter in symbol_filters if sym_filter['filterType'] == "MIN_NOTIONAL"]
         if not min_notional_filter_list:
@@ -253,16 +255,16 @@ class BinanceTrader(Trader):
         min_notional_filter = min_notional_filter_list[0]
         minNotional = float(min_notional_filter['minNotional'])
 
-        print(f"minQty: {minQty}, stepSize: {stepSize}, minNotational {minNotional}")
+
         #get account balance
         account_info = self.account.account_info()
-        print("[+] Got the account info")
+
         balances = account_info['balances']
         asset_balance_list = [bal for bal in balances if bal['asset'] == quote_asset]
         if not asset_balance_list:
             return {'error': True, 'message': 'Asset if not found in account_info, weird'}
         asset_balance = float(asset_balance_list[0]['free']) + float(asset_balance_list[0]['locked'])
-        logger.info(f"[+] Checking asset {quote_asset} for balance, {asset_balance}")
+
         if not asset_balance:
             return {'error': True, 'message': 'Zero account balance'}
         budget = asset_balance * self.percent_size
@@ -301,7 +303,6 @@ class BinanceTrader(Trader):
         lot_filter = lot_filter_list[0]
         minQty = float(lot_filter['minQty'])
         stepSize = float(lot_filter['stepSize'])
-        logger.debug(f"[+] minQty {minQty} and stepSize {stepSize}")
 
         min_notional_filter_list = [sym_filter for sym_filter in symbol_filters if
                                     sym_filter['filterType'] == "MIN_NOTIONAL"]
@@ -350,7 +351,6 @@ class BinanceTrader(Trader):
             payload = msg
             if payload['e'] == "outboundAccountInfo":
                 balances_all = payload['B']
-                logger.info(f"{self._exchange} received a balance event, {balances_all}")
                 balances = [{'asset': bal['a'], 'free': bal['f'], 'locked': bal['l']} for bal in balances_all if
                             float(bal['f']) or float(bal['l'])]
                 logger.debug(f"balances : {balances}")
@@ -421,7 +421,6 @@ class BinanceTrader(Trader):
                         'sell_quantity_executed': trade_params['cummulative_filled_quantity'],
                     }
 
-                logger.info(f"[+] Saving order to database {order_model_params}")
                 await self.update_order_model(**order_model_params)
                 asyncio.sleep(3)
                 await self.update_trade(**trade_model_params)
@@ -445,7 +444,8 @@ class BinanceTrader(Trader):
                             'side': 'SELL',
                             'price': sell_size_resp['price'],
                             'quantity': float(trade_params['cummulative_filled_quantity']),
-                            'order_id': order_id
+                            'order_id': order_id,
+                            'buy_order_id': trade_params['client_order_id']
                         })
                         if trade_params['status'] == "FILLED":
                             ol = [o for o in self.active_symbols if o['client_order_id'] == trade_params['client_order_id']]
@@ -529,7 +529,11 @@ class BinanceTrader(Trader):
             logger.info("[+] Current account balances")
             logger.info(asset_balances)
             return {"error": False, "result": asset_balances}
+        except binance.BinanceError as e:
+            logger.exception(e)
+            return {'error': True, 'message': f"{e}", 'code': e.code}
         except Exception as e:
+            logger.exception(e)
             return {'error': True, 'message': f"{e}"}
 
     @run_in_executor
@@ -565,24 +569,34 @@ class BinanceTrader(Trader):
                     await self.cancel_order(order.symbol, order.order_id)
 
                 if order.side == "SELL":
-                    complementary_buy_orders = [order_model for order_model in closed_order_models if order_model.symbol == order.symbol and order_model.side == "BUY"]
-                    last_buy_order = max(complementary_buy_orders, key=lambda x: int(x['order_time']))
-                    buy_price = last_buy_order.price
-                    market_price_resp = await self.get_last_price(order.symbol)
-                    if market_price_resp['error']:
-                        logger.error(market_price_resp['message'])
-                        continue
-                    market_price = market_price_resp['result']
-                    if float(market_price) < float(buy_price) - self.stop_loss_trigger: #we've gone below our stop loss
-                        logger.warning(f"[!] Market price for {order.symbol} has gone below stop loss trigger, placing stop loss sell")
-                        order_id = f"SELL_{order.order_id.split('_')[1]}"
-                        await self.orders_queue.put({
-                            'symbol': order.symbol,
-                            'exchange': 'BINANCE',
-                            'side': 'SELL',
-                            'price': market_price * 0.995,
-                            'order_id': order_id
-                        })
+                    trade_model = await self.get_trade_model(sell_order_id=order.order_id)
+                    if trade_model:
+                        buy_price = trade_model.buy_price
+                        market_price_resp = await self.get_last_price(order.symbol)
+                        if market_price_resp['error']:
+                            logger.error(market_price_resp['message'])
+                            continue
+                        market_price = market_price_resp['result']
+                        if float(market_price) < float(
+                                buy_price) - self.stop_loss_trigger:  # we've gone below our stop loss
+                            logger.warning(
+                                f"[!] Market price for {order.symbol} has gone below stop loss trigger, placing stop loss sell")
+
+                            order_id = f"SELL_{order.order_id.split('_')[1]}"
+                            await self.orders_queue.put({
+                                'symbol': order.symbol,
+                                'exchange': 'BINANCE',
+                                'side': 'SELL',
+                                'price': market_price * 0.995,
+                                'order_id': order_id,
+                                'buy_order_id': trade_model.buy_order_id
+                            })
+
+        except binance.BinanceError as e:
+            logger.exception(e)
+            if hasattr(e, 'code') and e.code in [-2014, -2015]:
+                await self.invalidate_keys()
+
         except Exception as e:
             logger.exception(e)
 
@@ -596,3 +610,11 @@ class BinanceTrader(Trader):
             return {'error': True, 'message': symbol_info_resp['message']}
         symbol_info = symbol_info_resp['result']
         return {'error': False, 'result': {'quote_asset': symbol_info['quoteAsset'], 'base_asset': symbol_info['baseAsset']}}
+
+    @run_in_executor
+    def validate_keys(self):
+        try:
+            balances_res = self.account.account_info()
+            return {"error": False, "result": "keys are okay"}
+        except Exception as e:
+            return {'error': True, 'message': f"{e}"}

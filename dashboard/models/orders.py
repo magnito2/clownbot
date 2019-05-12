@@ -27,6 +27,7 @@ class Order(db.Model):
 
     def serialize(self):
         return {
+            'id': self.id,
             'exchange': self.exchange,
             'order_id': self.order_id,
             'client_order_id': self.client_order_id,

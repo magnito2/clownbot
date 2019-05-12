@@ -71,10 +71,10 @@ class MyTelegramClient:
             await asyncio.sleep(30)
         while True:
             try:
-                message = await asyncio.wait_for(self.outgoing_messages_queue.get(), timeout=10)
+                message = await asyncio.wait_for(self.outgoing_messages_queue.get(), timeout=3600)
                 logger.info(f"[+] Recieved a new message, {message}")
                 await self.client.send_message(message['id'], message['message'])
             except asyncio.TimeoutError:
-                logger.info("[+] Timeout timeout")
+                logger.info("listening for messages to send out via telegram")
             except Exception as e:
                 logger.exception(e)

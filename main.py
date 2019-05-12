@@ -12,12 +12,24 @@ if a sell happens, celebrate buy slaughtering a goat. ;)
 logs everything (almost) in a db for analytics.
 '''
 
-import logging, configparser
+import logging, configparser, time
+import logging.handlers
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.DEBUG)
 
 logger = logging.getLogger('clone')
+
+fh = logging.handlers.RotatingFileHandler("logs/bot.log", maxBytes=100000, backupCount=5)
+formatter = logging.Formatter('%(asctime)s  - %(name)s - %(levelname)s - %(message)s')
+formatter.converter = time.gmtime
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+
+# create console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+logger.addHandler(ch)
 
 from celebro import Celebro
 import asyncio

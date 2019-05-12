@@ -32,7 +32,6 @@ class CQSScalpingFree(ProcessSignal):
 
         signal_raw = re.search(cls.re_pattern, message)
         if not signal_raw:
-            print(f"[!]Message was not a signal\n{message}")
             f = open('dump.txt', 'w', encoding='utf-8')
             f.write(message)
             f.close()
@@ -74,7 +73,6 @@ class QualitySignalsChannel(ProcessSignal):
     def process(cls, message):
         signal_raw = re.search(cls.re_pattern, message)
         if not signal_raw:
-            print(f"[!]Message was not a signal\n{message}")
             f = open('dump.txt', 'w', encoding='utf-8')
             f.write(message)
             f.close()

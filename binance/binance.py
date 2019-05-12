@@ -68,6 +68,15 @@ OrderBookTicker = namedtuple("OrderBookTicker", "bid_price, bid_qty, ask_price, 
 CandleStick = namedtuple("CandleStick", "open_time open high low close volume close_time quote_asset_volume trade_count taker_buy_base_quote_vol taker_buy_quote_asset_vol")
 
 
+class BinanceError(Exception):
+   def __init__(self, message, code):
+       super().__init__(message)
+       self.message = message
+       self.code = code
+   def __str__(self):
+      return repr(self.message)
+
+
 def _geturl_json(url, query_params=None, sign=False, method="GET", api_key=None, api_secret_key=None):
 
     if _URLS['exchangeInfo'] in url:
@@ -105,8 +114,8 @@ def _geturl_json(url, query_params=None, sign=False, method="GET", api_key=None,
         resp = urllib.request.urlopen(req)
         json_ret = json.loads(resp.read())
     except urllib.error.HTTPError as e:
-        data = e.read()
-        raise Exception("Request Failed: " + str(data))
+        data = json.loads(e.read())
+        raise BinanceError("Request Failed: " + str(data['msg']), code=data['code'])
 
     return json_ret
 

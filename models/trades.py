@@ -9,7 +9,7 @@ class Trade(Base):
 
     id = Column(Integer, primary_key=True)
     exchange = Column(String(64))
-    client_order_id = Column(String(255))
+    #client_order_id = Column(String(255))
     buy_order_id = Column(String(255))
     sell_order_id = Column(String(255))
     symbol = Column(String(64))
