@@ -19,6 +19,7 @@ class Portfolio extends Component{
             document.body.removeEventListener('click', this.handleChange);
         }
         this.setState({ show_dropdown: !this.state.show_dropdown });
+        e.stopPropagation();
     }
 
 
@@ -35,7 +36,7 @@ class Portfolio extends Component{
                         btc_values && btc_values.map(btc_value =>
                             <div class="notifi__item">
                                 <div class="content">
-                                    <p>{btc_value.exchange} - {btc_value.btc_value} BTC</p>
+                                    <p>{btc_value.exchange} - {btc_value.btc_value} BTC - {btc_value.is_active ? <span class="badge badge-success">running</span>:<span class="badge badge-danger">error</span> }</p>
                                     <span class="date">{btc_value.timestamp}</span>
                                 </div>
                             </div>

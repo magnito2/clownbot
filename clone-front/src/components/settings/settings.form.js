@@ -18,7 +18,8 @@ class SettingsForm extends Component{
             receive_notifications: this.props.receive_notifications,
             user_tg_id: this.props.user_tg_id,
             use_fixed_amount_per_order : this.props.use_fixed_amount_per_order,
-            fixed_amount_per_order : this.props.fixed_amount_per_order
+            fixed_amount_per_order : this.props.fixed_amount_per_order,
+            loading: false
         };
         this.handleSubmit = this.handleSubmit.bind(this);
         this.handleChange = this.handleChange.bind(this);
@@ -52,9 +53,10 @@ class SettingsForm extends Component{
         {
             dispatch(settingsActions.create({
                 exchange, profit_margin, stop_loss_trigger, order_cancel_seconds, min_order_size, user_tg_id, receive_notifications,
-                use_fixed_amount_per_order, fixed_amount_per_order
+                use_fixed_amount_per_order, fixed_amount_per_order, api_secret, api_key
             }));
         }
+        this.setState({loading:true})
 
     }
 
@@ -63,18 +65,18 @@ class SettingsForm extends Component{
         if (nextProps.settings.accounts.length > 0){
             const exchange_settings = nextProps.settings.accounts.find(acc => acc.exchange ===this.state.exchange);
             if (exchange_settings !== undefined){
-                console.log("Our exchange settings  ya mwisho kapsaaa", exchange_settings);
                 this.setState({account_exists: true});
             }
             else{
                 return
             }
-            console.log("Our latest settings are", exchange_settings, "Our exchange is", this.state.exchange);
             if (exchange_settings.api_key !== this.state.api_key) {
                 this.setState({ api_key: exchange_settings.api_key });
             }
             if (exchange_settings.api_secret !== this.state.api_secret) {
-                this.setState({ api_secret: exchange_settings.api_secret });
+                this.setState({
+                    api_secret: exchange_settings.api_secret,
+                });
             }
             if (exchange_settings.profit_margin !== this.state.profit_margin) {
                 this.setState({ profit_margin: exchange_settings.profit_margin });
@@ -223,7 +225,9 @@ class SettingsForm extends Component{
                 }
                 <div class="form-actions form-group">
                     <button type="submit" class="btn btn-success btn-sm">Submit</button>
+                    {this.props.settings.loading && <img src="data:image/gif;base64,R0lGODlhEAAQAPIAAP///wAAAMLCwkJCQgAAAGJiYoKCgpKSkiH/C05FVFNDQVBFMi4wAwEAAAAh/hpDcmVhdGVkIHdpdGggYWpheGxvYWQuaW5mbwAh+QQJCgAAACwAAAAAEAAQAAADMwi63P4wyklrE2MIOggZnAdOmGYJRbExwroUmcG2LmDEwnHQLVsYOd2mBzkYDAdKa+dIAAAh+QQJCgAAACwAAAAAEAAQAAADNAi63P5OjCEgG4QMu7DmikRxQlFUYDEZIGBMRVsaqHwctXXf7WEYB4Ag1xjihkMZsiUkKhIAIfkECQoAAAAsAAAAABAAEAAAAzYIujIjK8pByJDMlFYvBoVjHA70GU7xSUJhmKtwHPAKzLO9HMaoKwJZ7Rf8AYPDDzKpZBqfvwQAIfkECQoAAAAsAAAAABAAEAAAAzMIumIlK8oyhpHsnFZfhYumCYUhDAQxRIdhHBGqRoKw0R8DYlJd8z0fMDgsGo/IpHI5TAAAIfkECQoAAAAsAAAAABAAEAAAAzIIunInK0rnZBTwGPNMgQwmdsNgXGJUlIWEuR5oWUIpz8pAEAMe6TwfwyYsGo/IpFKSAAAh+QQJCgAAACwAAAAAEAAQAAADMwi6IMKQORfjdOe82p4wGccc4CEuQradylesojEMBgsUc2G7sDX3lQGBMLAJibufbSlKAAAh+QQJCgAAACwAAAAAEAAQAAADMgi63P7wCRHZnFVdmgHu2nFwlWCI3WGc3TSWhUFGxTAUkGCbtgENBMJAEJsxgMLWzpEAACH5BAkKAAAALAAAAAAQABAAAAMyCLrc/jDKSatlQtScKdceCAjDII7HcQ4EMTCpyrCuUBjCYRgHVtqlAiB1YhiCnlsRkAAAOwAAAAAAAAAAAA==" />}
                 </div>
+
 
             </form>)
     }

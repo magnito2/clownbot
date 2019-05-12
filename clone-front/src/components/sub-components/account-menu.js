@@ -14,7 +14,7 @@ class AccountMenu extends Component {
 
     handleChange(e){
         e.preventDefault();
-        if ( e.target.classList.contains( 'logout-button' ) ) {
+        if (e.target.classList.contains( 'logout-button' )) {
             userActions.logout();
         }
         if (!this.state.show_dropdown){
@@ -24,6 +24,7 @@ class AccountMenu extends Component {
             document.body.removeEventListener('click', this.handleChange);
         }
         this.setState({ show_dropdown: !this.state.show_dropdown });
+        e.stopPropagation();
     }
 
     render(){

@@ -4,6 +4,7 @@ import { Notify } from 'react-redux-notify';
 import {DropdownLink} from "../sub-components/dropdown-link";
 import {AccountMenu, Portfolio} from "../sub-components";
 import {portfoliosActions} from "../../actions";
+import {MobileNavigation} from "../mobile-nav/index";
 
 class MainWrapper extends Component{
 
@@ -36,35 +37,7 @@ class MainWrapper extends Component{
 
         return (<body>
         <div class="page-wrapper">
-            <header class="header-mobile d-block d-lg-none">
-                <div class="header-mobile__bar">
-                    <div class="container-fluid">
-                        <div class="header-mobile-inner">
-                            <a class="logo" href="/">
-                                <img src="images/icon/clown.png" alt="Clown" />
-                            </a>
-                            <button class="hamburger hamburger--slider" type="button">
-                            <span class="hamburger-box">
-                                <span class="hamburger-inner"></span>
-                            </span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <nav class="navbar-mobile">
-                    <div class="container-fluid">
-                        <ul class="navbar-mobile__list list-unstyled">
-                            <li>
-                                <a href="/"><i class="fas fa-tachometer-alt"></i>Dashboard</a>
-                            </li>
-                            <li>
-                                <a href="/settings">
-                                    <i class="fas fa-chart-bar"></i>Settings</a>
-                            </li>
-                        </ul>
-                    </div>
-                </nav>
-            </header>
+            <MobileNavigation/>
             <aside class="menu-sidebar d-none d-lg-block">
                 <div class="logo">
                     <a href="#">

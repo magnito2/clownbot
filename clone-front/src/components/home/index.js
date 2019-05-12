@@ -4,6 +4,7 @@ import { connect } from 'react-redux';
 import { ordersActions, settingsActions, portfoliosActions } from '../../actions';
 import {allDeepEqual} from "../../helpers/compare-equal-arrays";
 import {PortfolioChart} from "../sub-components/portfolio.chart";
+import {IndexOrdersTable} from "../sub-components/index-orders-table";
 
 class IndexPage extends Component {
 
@@ -19,7 +20,8 @@ class IndexPage extends Component {
                     'BITTREX': []
                 },
                 loaded:false
-            }
+            },
+            activePage: 1,
 
         }
     }
@@ -55,7 +57,7 @@ class IndexPage extends Component {
         return (
             <MainWrapper>
                 <div class="row m-t-25">
-                    <div class="col-sm-12 col-lg-9">
+                    <div class="col-sm-12 col-lg-">
                         <div class="overview-wrap">
                             <h2 class="title-1">Portfolio</h2>
                         </div>
@@ -69,23 +71,6 @@ class IndexPage extends Component {
                                         <h2>My</h2>
                                         <span>chart</span>
                                     </div>
-                                    <div class="text pull-right">
-                                        <form class="form-header" action="">
-                                            <div class="form-group">
-                                                <div class="form-check-inline form-check">
-                                                    <label for="inline-radio1" class="form-check-label ">
-                                                        <input type="radio" id="inline-radio1" name="inline-radios" value="option1" class="form-check-input"/><h2><span>All</span></h2>
-                                                    </label>
-                                                    <label for="inline-radio2" class="form-check-label ">
-                                                        <input type="radio" id="inline-radio2" name="inline-radios" value="option2" class="form-check-input"/><h2><span>Binance</span></h2>
-                                                    </label>
-                                                    <label for="inline-radio3" class="form-check-label ">
-                                                        <input type="radio" id="inline-radio3" name="inline-radios" value="option3" class="form-check-input"/><h2><span>Bittrex</span></h2>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    </div>
                                 </div>
                                 <div class="overview-chart">
                                     {
@@ -96,74 +81,7 @@ class IndexPage extends Component {
                         </div>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-lg-9">
-                        <div class="overview-wrap">
-                            <h2 class="title-1">Buys</h2>
-                        </div>
-                        <div class="table-responsive table--no-card m-b-40">
-                            <table class="table table-borderless table-striped table-earning">
-                                <thead>
-                                <tr>
-                                    <th>Exchange</th>
-                                    <th>symbol</th>
-                                    <th>price</th>
-                                    <th>amount</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-
-                                {orders.map(order => {
-                                    if (order.side === "BUY" || order.side === "LIMIT_BUY") {
-                                        return (
-                                            <tr>
-                                                <td>{order.exchange}</td>
-                                                <td>{order.symbol}</td>
-                                                <td>{order.price}</td>
-                                                <td>{order.quantity}</td>
-                                            </tr>
-                                        )
-                                    }
-                                })}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-lg-9">
-                        <div class="overview-wrap">
-                            <h2 class="title-1">Sells</h2>
-                        </div>
-                        <div class="table-responsive table--no-card m-b-40">
-                            <table class="table table-borderless table-striped table-earning">
-                                <thead>
-                                <tr>
-                                    <th>Exchange</th>
-                                    <th>symbol</th>
-                                    <th>price</th>
-                                    <th>amount</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-
-                                {orders.map(order => {
-                                    if (order.side === "SELL" || order.side === "LIMIT_SELL") {
-                                        return (
-                                            <tr>
-                                                <td>{order.exchange}</td>
-                                                <td>{order.symbol}</td>
-                                                <td>{order.price}</td>
-                                                <td>{order.quantity}</td>
-                                            </tr>
-                                        )
-                                    }
-                                })}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+                <IndexOrdersTable orders = {orders} itemsCountPerPage={10}/>
             </MainWrapper>);
     }
 }

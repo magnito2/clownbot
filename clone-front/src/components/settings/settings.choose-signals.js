@@ -2,6 +2,8 @@ import React, { Component } from 'react';
 import { connect } from "react-redux";
 import {signalsActions, settingsActions} from "../../actions";
 import {MainWrapper} from "../wrappers/main";
+import {Spinner} from "../sub-components/spinner";
+import {allDeepEqual} from "../../helpers/compare-equal-arrays";
 
 class SignalsForm extends Component{
     constructor(props){
@@ -9,7 +11,7 @@ class SignalsForm extends Component{
         this.state = {
             exchange : null,
             signals : [],
-            checked_signals : [],
+            checked_signals:[],
             submitted: false,
             exchange_accounts : []
         };
@@ -62,8 +64,8 @@ class SignalsForm extends Component{
             if(nextProps.signals.list.length > 0){
                 this.setState({ signals: nextProps.signals.list });
             }
-            if(nextProps.signals.checked_signals.length > 0){
-                this.setState({checked_signals: nextProps.signals.checked_signals});
+            if(!allDeepEqual([nextProps.signals.checked_signals, this.state.checked_signals])){
+                this.setState({checked_signals: nextProps.signals.checked_signals})
             }
         }
         if (nextProps.settings){
@@ -73,6 +75,7 @@ class SignalsForm extends Component{
 
     render(){
         const { exchange, submitted, signals, exchange_accounts, checked_signals } = this.state;
+        const { loading } = this.props.signals;
 
         return (<MainWrapper>
             <form class="" onSubmit={this.handleSubmit}>
@@ -112,7 +115,7 @@ class SignalsForm extends Component{
                                             </div>
                                         </div>
                                         <div class="form-actions form-group">
-                                            <button type="submit" class="btn btn-success btn-sm">Submit</button>
+                                            <button type="submit" class="btn btn-success btn-sm">Submit <Spinner loading={loading}/></button>
                                         </div>
                                     </div>
                                     : ''
