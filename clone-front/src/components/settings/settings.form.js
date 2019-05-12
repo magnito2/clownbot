@@ -6,19 +6,19 @@ class SettingsForm extends Component{
     constructor(props){
         super(props);
         this.state = {
-            api_key : this.props.api_key,
-            api_secret : this.props.api_secret,
+            api_key : '',
+            api_secret : '',
             exchange : this.props.exchange,
-            profit_margin : this.props.profit_margin,
-            stop_loss_trigger : this.props.stop_loss_trigger,
-            order_cancel_seconds : this.props.order_cancel_seconds,
-            min_order_size: this.props.min_order_size,
+            profit_margin : '',
+            stop_loss_trigger : '',
+            order_cancel_seconds : '',
+            min_order_size: '',
             submitted: false,
             account_exists: false,
-            receive_notifications: this.props.receive_notifications,
-            user_tg_id: this.props.user_tg_id,
-            use_fixed_amount_per_order : this.props.use_fixed_amount_per_order,
-            fixed_amount_per_order : this.props.fixed_amount_per_order,
+            receive_notifications: '',
+            user_tg_id: '',
+            use_fixed_amount_per_order : '',
+            fixed_amount_per_order : '',
             loading: false
         };
         this.handleSubmit = this.handleSubmit.bind(this);
@@ -68,6 +68,7 @@ class SettingsForm extends Component{
                 this.setState({account_exists: true});
             }
             else{
+                alert('account does not exist');
                 return
             }
             if (exchange_settings.api_key !== this.state.api_key) {

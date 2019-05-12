@@ -20,9 +20,7 @@ function create(settings) {
                 settings => {
                     dispatch(success(settings));
                     dispatch(alertActions.success(settings.message.toString()));
-                    if(settings.action === "get-settings"){
-                        window.location.reload(true);
-                    }
+                    window.location.reload(true);
                     console.log("settings created", settings);
                 },
                 error => {
