@@ -23,7 +23,6 @@ class User(db.Model, UserMixin):
     username = db.Column(db.String(255))
     avatar = db.Column(db.String(255))
     tg_address = db.Column(db.String(255))
-    orders = db.relationship('Order', backref='user', lazy=True)
 
     def serialize(self):
         return {

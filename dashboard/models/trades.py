@@ -6,6 +6,7 @@ class Trade(db.Model):
     __tablename__="trades"
 
     id = db.Column(db.Integer, primary_key=True)
+    exchange_account_id = db.Column(db.Integer, db.ForeignKey('exchange_account.id'), nullable=False)
     exchange = db.Column(db.String(64))
     buy_order_id = db.Column(db.String(255))
     sell_order_id = db.Column(db.String(255))

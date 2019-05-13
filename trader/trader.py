@@ -161,20 +161,23 @@ class Trader:
 
     def _create_order_model(self, **kwargs):
         with create_session() as session:
+            account_model = session.query(ExchangeAccount).filter_by(id=self.account_model_id).first()
             order = Order(**kwargs)
-            session.add(order)
+            account_model.orders.append(order)
             session.commit()
 
     @run_in_executor
     def update_order_model(self, **kwargs):
         client_order_id = kwargs.get('client_order_id')
         with create_session() as session:
+            account_model = session.query(ExchangeAccount).filter_by(id=self.account_model_id).first()
+
             order = session.query(Order).filter_by(exchange=self._exchange).filter_by(client_order_id=client_order_id).first()
             if order:
                 session.query(Order).filter_by(exchange=self._exchange).filter_by(client_order_id=client_order_id).update(kwargs)
             else:
-                order = Order(user_id=1,**kwargs)
-                session.add(order)
+                order = Order(**kwargs)
+                account_model.orders.append(order)
             session.commit()
 
 
@@ -189,9 +192,9 @@ class Trader:
     def get_order_models(self, status=None):
         with create_session() as session:
             if not status:
-                orders = session.query(Order).filter_by(exchange=self._exchange).all()
+                orders = session.query(Order).filter_by(exchange=self._exchange).filter_by(exchange_account_id=self.account_model_id).all()
             else:
-                orders = session.query(Order).filter_by(exchange=self._exchange).filter_by(status=status).all()
+                orders = session.query(Order).filter_by(exchange=self._exchange).filter_by(status=status).filter_by(exchange_account_id=self.account_model_id).all()
             if orders:
                 return orders
             else:
@@ -200,7 +203,7 @@ class Trader:
     @run_in_executor
     def get_trade_models(self):
         with create_session() as session:
-            trades = session.query(Trade).filter_by(exchange=self._exchange).all()
+            trades = session.query(Trade).filter_by(exchange=self._exchange).filter_by(exchange_account_id=self.account_model_id).all()
             if trades:
                 return trades
             else:

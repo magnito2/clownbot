@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, DateTime, String, Float
+from sqlalchemy import Column, Integer, DateTime, String, Float, ForeignKey
 from datetime import datetime
 
 from . import Base
@@ -8,6 +8,7 @@ class Trade(Base):
     __tablename__="trades"
 
     id = Column(Integer, primary_key=True)
+    exchange_account_id = Column(Integer, ForeignKey('exchange_account.id'), nullable=False)
     exchange = Column(String(64))
     #client_order_id = Column(String(255))
     buy_order_id = Column(String(255))

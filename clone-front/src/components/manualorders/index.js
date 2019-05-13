@@ -2,7 +2,8 @@ import React, { Component } from 'react';
 import { connect } from "react-redux";
 import {MainWrapper} from "../wrappers/main";
 import {manualordersActions, settingsActions} from "../../actions";
-import {ReactSelectize, SimpleSelect, MultiSelect} from 'react-selectize';
+import Select from 'react-select'
+import {Spinner} from "../sub-components/spinner";
 
 class ManualOrdersForm extends Component{
 
@@ -48,6 +49,10 @@ class ManualOrdersForm extends Component{
         }
     }
 
+    handleSelectChange = name => (value) => {
+        this.setState({[name]: value.value});
+    }
+
     componentDidMount(){
         this.props.dispatch(settingsActions.get());
     }
@@ -86,6 +91,9 @@ class ManualOrdersForm extends Component{
 
         const {exchange_account_id, exchange_accounts, exchange_symbols, symbol, side, price, quantity, submitted} = this.state;
         const btc_re = /^([A-Z]{3}|[A-Z]{4})BTC/
+
+        const options = exchange_symbols.symbols.map(symbol => { return {'value': symbol, 'label': symbol}});
+
         return (<MainWrapper>
             <form class="" onSubmit={this.handleSubmit}>
                 <div className="col-lg-10">
@@ -107,14 +115,12 @@ class ManualOrdersForm extends Component{
                                         <div class="form-group">
                                             <label for="company" class=" form-control-label">Symbol</label>
                                             {
-                                                    exchange_symbols.loading ? <img src="data:image/gif;base64,R0lGODlhEAAQAPIAAP///wAAAMLCwkJCQgAAAGJiYoKCgpKSkiH/C05FVFNDQVBFMi4wAwEAAAAh/hpDcmVhdGVkIHdpdGggYWpheGxvYWQuaW5mbwAh+QQJCgAAACwAAAAAEAAQAAADMwi63P4wyklrE2MIOggZnAdOmGYJRbExwroUmcG2LmDEwnHQLVsYOd2mBzkYDAdKa+dIAAAh+QQJCgAAACwAAAAAEAAQAAADNAi63P5OjCEgG4QMu7DmikRxQlFUYDEZIGBMRVsaqHwctXXf7WEYB4Ag1xjihkMZsiUkKhIAIfkECQoAAAAsAAAAABAAEAAAAzYIujIjK8pByJDMlFYvBoVjHA70GU7xSUJhmKtwHPAKzLO9HMaoKwJZ7Rf8AYPDDzKpZBqfvwQAIfkECQoAAAAsAAAAABAAEAAAAzMIumIlK8oyhpHsnFZfhYumCYUhDAQxRIdhHBGqRoKw0R8DYlJd8z0fMDgsGo/IpHI5TAAAIfkECQoAAAAsAAAAABAAEAAAAzIIunInK0rnZBTwGPNMgQwmdsNgXGJUlIWEuR5oWUIpz8pAEAMe6TwfwyYsGo/IpFKSAAAh+QQJCgAAACwAAAAAEAAQAAADMwi6IMKQORfjdOe82p4wGccc4CEuQradylesojEMBgsUc2G7sDX3lQGBMLAJibufbSlKAAAh+QQJCgAAACwAAAAAEAAQAAADMgi63P7wCRHZnFVdmgHu2nFwlWCI3WGc3TSWhUFGxTAUkGCbtgENBMJAEJsxgMLWzpEAACH5BAkKAAAALAAAAAAQABAAAAMyCLrc/jDKSatlQtScKdceCAjDII7HcQ4EMTCpyrCuUBjCYRgHVtqlAiB1YhiCnlsRkAAAOwAAAAAAAAAAAA==" />
-
-                                                : <select name="symbol" id="select_id_2" class="form-control-lg form-control" onChange={this.handleChange}>
-                                                <option value="">choose a symbol</option>
-                                                {
-                                                    !exchange_symbols.loading && exchange_symbols.symbols.map ( symbol => <option value={symbol}>{symbol}</option>)
-                                                }
-                                            </select>}
+                                                exchange_symbols.loading ? <Spinner loading={exchange_symbols.loading}/> :
+                                                <Select
+                                                    options={options}
+                                                    onChange = {this.handleSelectChange('symbol')}
+                                                />
+                                            }
                                             {submitted && !symbol &&
                                             <div className="help-block">You have to select a symbol</div>
                                             }

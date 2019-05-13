@@ -5,7 +5,7 @@ class Order(db.Model):
     __tablename__ = "orders"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    exchange_account_id = db.Column(db.Integer, db.ForeignKey('exchange_account.id'), nullable=False)
     exchange = db.Column(db.String(64))
     order_id = db.Column(db.String(128))
     client_order_id = db.Column(db.String(255))

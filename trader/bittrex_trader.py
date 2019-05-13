@@ -269,7 +269,7 @@ class BittrexTrader(Trader):
                     'order_time': order['Opened'],
                     'cummulative_filled_quantity': float(order['Quantity']) - float(order['QuantityRemaining']),
                     'status': 'FILLED' if order['Closed'] else 'NEW',
-                    'timestamp': order.get('TimeStamp')
+                    'timestamp': order.get('Opened')
                 }
                 await self.update_order_model(**_params)
 

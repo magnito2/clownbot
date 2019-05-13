@@ -85,7 +85,7 @@ class ExchangeSettings(Resource):
                 'account_id': exchange_account.id
             }
             try:
-                resp = requests.post(app.config['BOT_ADDRESS'], json=params)
+                resp = requests.post(app.config['BOT_ADDRESS'], json=params, timeout=15)
                 if not resp.status_code == 200:
                     response = {'message': "Ooops, we developed a problem handling the command"}
                     has_error = True
@@ -96,6 +96,13 @@ class ExchangeSettings(Resource):
                         has_error = True
             except requests.exceptions.ConnectionError:
                 response = {'message': "The auto trader is currently inaccessible, will start your trades as soon as we make contact"}
+                has_error = True
+            except requests.Timeout:
+                response = {'message': "The auto trader is currently inaccessible, will start your trades as soon as we make contact"}
+                has_error = True
+
+            except Exception as e:
+                response = {'message': str(e)}
                 has_error = True
         else:
 

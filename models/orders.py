@@ -8,7 +8,7 @@ class Order(Base):
     __tablename__="orders"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('user.id'))
+    exchange_account_id = Column(Integer, ForeignKey('exchange_account.id'), nullable=False)
     exchange = Column(String(64))
     order_id = Column(String(128))
     client_order_id = Column(String(255))

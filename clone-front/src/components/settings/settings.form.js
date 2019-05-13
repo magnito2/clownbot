@@ -49,12 +49,14 @@ class SettingsForm extends Component{
         if (exchange && api_key && api_secret && !account_exists) {
             dispatch(settingsActions.create({exchange, api_key, api_secret}));
         }
-        else if(account_exists && profit_margin && stop_loss_trigger && order_cancel_seconds && min_order_size)
+        else if(account_exists && profit_margin && stop_loss_trigger && order_cancel_seconds)
         {
-            dispatch(settingsActions.create({
-                exchange, profit_margin, stop_loss_trigger, order_cancel_seconds, min_order_size, user_tg_id, receive_notifications,
-                use_fixed_amount_per_order, fixed_amount_per_order, api_secret, api_key
-            }));
+            if(min_order_size || use_fixed_amount_per_order && fixed_amount_per_order){
+                dispatch(settingsActions.create({
+                    exchange, profit_margin, stop_loss_trigger, order_cancel_seconds, min_order_size, user_tg_id, receive_notifications,
+                    use_fixed_amount_per_order, fixed_amount_per_order, api_secret, api_key
+                }));
+            }
         }
         this.setState({loading:true})
 
@@ -168,16 +170,18 @@ class SettingsForm extends Component{
                             <div className="help-block">Order Cancel Seconds is required</div>
                             }
                         </div>
+                        { !use_fixed_amount_per_order &&
                         <div class="form-group">
                             <label>Min Order Size</label>
                             <div class="input-group">
                                 <input type="text" name="min_order_size" value={min_order_size} onChange={this.handleChange} class="form-control"/>
-                                    <div class="input-group-addon">%</div>
+                                <div class="input-group-addon">%</div>
                             </div>
-                            {submitted && !min_order_size &&
-                            <div className="help-block">Min Order Size is required</div>
+                            {submitted && !min_order_size && !use_fixed_amount_per_order &&
+                            <div className="help-block">Min Order Size is required or specify a fixed amount per order</div>
                             }
                         </div>
+                        }
                         <div className="form-group">
                             <div className="form-check">
                                 <div class="checkbox">
@@ -194,7 +198,7 @@ class SettingsForm extends Component{
                                 <div class="input-group">
                                     <input type="text" name="fixed_amount_per_order" value={fixed_amount_per_order} onChange={this.handleChange} class="form-control"/>
                                 </div>
-                                {submitted && !fixed_amount_per_order &&use_fixed_amount_per_order &&
+                                { submitted && !fixed_amount_per_order && use_fixed_amount_per_order &&
                                 <div className="help-block">Enter the amount to use per order</div>
                                 }
                             </div>

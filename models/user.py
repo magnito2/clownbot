@@ -12,4 +12,3 @@ class User(Base):
     email = Column(String(255), unique=True)
     username = Column(String(255))
     tg_address = Column(String(255))
-    orders = relationship('Order', backref='user', lazy=True)

@@ -1,15 +1,15 @@
 from flask_restful import Resource, abort, fields, reqparse
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from ..models import Order
+from ..models import Order, ExchangeAccount
 from .. import  user_datastore
 
 parser = reqparse.RequestParser()
 parser.add_argument("start_id")
 parser.add_argument("end_id")
 parser.add_argument("side")
-parser.add_argument("start_date", help="This field cannot be empty", required=True)
-parser.add_argument("end_date", help="This field cannot be empty", required=True)
-parser.add_argument("id")
+parser.add_argument("start_date", help="This field cannot be empty")
+parser.add_argument("end_date", help="This field cannot be empty")
+parser.add_argument("exchange_account_id")
 
 class OrdersAPI(Resource):
 
@@ -22,17 +22,24 @@ class OrdersAPI(Resource):
         "end_date": fields.DateTime(),
     }
     @jwt_required
-    def get(self, order_id = None):
+    def get(self):
         email = get_jwt_identity()
         user = user_datastore.get_user(email)
+
+        args = parser.parse_args()
+        exchange_account_id = args.get('exchange_account_id')
         if not user:
             abort(401, message=f"No user found for email {email}")
-        if order_id:
-            order = Order.query.get(order_id)
-            if not Order or not order in user.orders:
-                abort(404)
-            return order.serialize()
-        if user.orders:
-            orders = [order.serialize() for order in user.orders]
-            return orders
-        return []
+        if exchange_account_id:
+            exchange_account = ExchangeAccount.query.get(exchange_account_id)
+            if exchange_account:
+                orders = exchange_account.orders
+                orders_resp = [order.serialize() for order in orders]
+                return orders_resp
+        else:
+            all_orders = []
+            for exchange_account in user.exchange_accounts:
+                orders = exchange_account.orders
+                orders_resp = [order.serialize() for order in orders]
+                all_orders += orders_resp
+        return all_orders
