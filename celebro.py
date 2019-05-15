@@ -83,7 +83,7 @@ class Celebro:
             session.commit()
 
     def validate_account_model_params(self, kwargs):
-        for key in ['api_key', 'api_secret', 'profit_margin', 'order_timeout']:
+        for key in ['api_key', 'api_secret', 'profit_margin', 'stop_loss_trigger', 'order_timeout']:
             if kwargs[key] == None:
                 return False
         if kwargs['percent_size'] == None:

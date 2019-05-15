@@ -32,7 +32,16 @@ class HttpSignalReciever:
         }
         '''
         if 'signal' in data:
-            signal = data
+            signal = {
+                'symbol' : data['symbol'],
+                'exchange' : data['exchange'],
+                'side': data['side'],
+                'price': float(data['price']),
+                'quantity': float(data['quantity']),
+                'signal_name': 'ManualOrder',
+                'signal_id': None,
+                'signal': True
+            }
 
             if signal['exchange'] == "BINANCE":
                 for queue in self.binance_queues:

@@ -27,7 +27,7 @@ class Trader:
         self.btc_per_order = None
         self.profit_margin = kwargs.get('profit_margin') if kwargs.get('profit_margin') < 1 else kwargs.get('profit_margin') / 100
         self.order_timeout = kwargs.get('order_timeout')
-        self.stop_loss_trigger = kwargs.get('stop_loss_trigger')
+        self.stop_loss_trigger = kwargs.get('stop_loss_trigger') if kwargs.get('stop_loss_trigger') < 1 else kwargs.get('stop_loss_trigger') / 100
         self.streamer = None
         self.active_symbols = []
         self.open_orders = []
@@ -87,6 +87,7 @@ class Trader:
                             continue
                         logger.info(resp)
                         result = resp['result']
+                        del result['side']
                         self.streamer.add_trades(result['symbol'], self.process_symbol_stream)
                         await self.update_trade(**result)
                         await self.send_notification(f"New order created, {result} ")
@@ -150,10 +151,13 @@ class Trader:
         '''
 
     def parse_time(self, timestring):
-        res = re.search(self.time_re, timestring)
-        if res:
-            val, interval = res.groups()
-            return timedelta(seconds= int(val) * self.time_dict[interval])
+        if type(timestring) == str:
+            res = re.search(self.time_re, timestring)
+            if res:
+                val, interval = res.groups()
+                return timedelta(seconds= int(val) * self.time_dict[interval])
+        else:
+            return timedelta(seconds=timestring)
 
     @run_in_executor
     def create_order_model(self, **kwargs):
@@ -168,7 +172,12 @@ class Trader:
 
     @run_in_executor
     def update_order_model(self, **kwargs):
+        return self._update_order_model(**kwargs)
+
+    def _update_order_model(self, **kwargs):
         client_order_id = kwargs.get('client_order_id')
+        if not client_order_id:
+            return False
         with create_session() as session:
             account_model = session.query(ExchangeAccount).filter_by(id=self.account_model_id).first()
 
@@ -221,6 +230,9 @@ class Trader:
 
     @run_in_executor
     def get_asset_models(self, asset = None):
+        return self._get_asset_models(asset)
+
+    def _get_asset_models(self, asset=None):
         with create_session() as session:
             if asset:
                 asset_model = session.query(Asset).filter_by(exchange=self._exchange).filter_by(name=asset).first()
@@ -345,7 +357,7 @@ class Trader:
                     if price_resp['error']:
                         logger.error(f"[!] Couldnt get price of {symbol}, reason: {price_resp['message']}")
                         continue
-                    price = float(price_resp['result']['price'])
+                    price = float(price_resp['result'])
                     portfolio += (float(asset.free) + float(asset.locked)) * price
             logger.info(f"Total portfolio is {portfolio}")
             await self.update_portfolio_model(portfolio)

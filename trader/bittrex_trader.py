@@ -317,7 +317,7 @@ class BittrexTrader(Trader):
                     buy_price_resp = await self.get_last_price(symbol)
                     if buy_price_resp['error']:
                         logger.error(f"[!] {buy_price_resp['message']}")
-                    buy_price = buy_price_resp['result']['Last']
+                    buy_price = buy_price_resp['result']
                 symbol_open_sell_orders = [order for order in open_orders if symbol in order['Exchange'] and order['OrderType'] == "LIMIT_SELL"]
                 if symbol_open_sell_orders:
                     last_sell_order = max(symbol_open_sell_orders, key=lambda x: int(datetime.strptime(f"{x['Opened']}Z",'%Y-%m-%dT%H:%M:%S.%fZ').timestamp()))
@@ -584,7 +584,7 @@ class BittrexTrader(Trader):
     def get_last_price(self, symbol):
         last_price = self.account.get_ticker(symbol)
         if last_price['success']:
-            return {'error': False, 'result': {'price': last_price['result']['Last']}}
+            return {'error': False, 'result': last_price['result']['Last']}
         return {'error': True, 'message': last_price['message']}
 
     async def print_asset_balances(self, balances):

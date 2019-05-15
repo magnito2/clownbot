@@ -81,7 +81,6 @@ class ManualOrdersAPI(Resource):
         exchange_account = ExchangeAccount.query.get(exchange_account_id)
 
         try:
-
             resp = requests.post(app.config['BOT_ADDRESS'], json=order_params)
             if not resp.status_code == 200:
                 print(resp.raw)
