@@ -20,7 +20,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 logger = logging.getLogger('clone')
 
-fh = logging.handlers.RotatingFileHandler("logs/bot.log", maxBytes=100000, backupCount=5)
+fh = logging.handlers.RotatingFileHandler("logs/bot.log", maxBytes=100000, backupCount=5, encoding='utf-8')
 formatter = logging.Formatter('%(asctime)s  - %(name)s - %(levelname)s - %(message)s')
 formatter.converter = time.gmtime
 fh.setFormatter(formatter)

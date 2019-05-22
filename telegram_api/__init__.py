@@ -50,7 +50,8 @@ class MyTelegramClient:
                 else:
                     logger.debug(f"Signal not captured, signal is {signal}")
             else:
-                logger.error(f"[!] {text} is not a signal")
+                pass
+                #logger.error(f"[!] {text} is not a signal")
         except Exception as e:
             logger.exception(e)
 
@@ -73,7 +74,8 @@ class MyTelegramClient:
             try:
                 message = await asyncio.wait_for(self.outgoing_messages_queue.get(), timeout=3600)
                 logger.info(f"[+] Recieved a new message, {message}")
-                await self.client.send_message(message['id'], message['message'])
+                f_message = f"{message.get('sender')}: {message['message']}"
+                await self.client.send_message(message['id'], f_message)
             except asyncio.TimeoutError:
                 logger.info("listening for messages to send out via telegram")
             except Exception as e:

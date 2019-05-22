@@ -34,12 +34,12 @@ class OrdersAPI(Resource):
             exchange_account = ExchangeAccount.query.get(exchange_account_id)
             if exchange_account:
                 orders = exchange_account.orders
-                orders_resp = [order.serialize() for order in orders]
+                orders_resp = [order.serialize() for order in orders if order.status != 'CANCELED']
                 return orders_resp
         else:
             all_orders = []
             for exchange_account in user.exchange_accounts:
                 orders = exchange_account.orders
-                orders_resp = [order.serialize() for order in orders]
+                orders_resp = [order.serialize() for order in orders if order.status != 'CANCELED']
                 all_orders += orders_resp
         return all_orders

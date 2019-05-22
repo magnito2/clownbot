@@ -42,3 +42,4 @@ from .orders import Order
 from .signals import Signal
 from .portfolio import Portfolio
 from .manual_orders import ManualOrder
+from .binance_symbols import BinanceSymbol

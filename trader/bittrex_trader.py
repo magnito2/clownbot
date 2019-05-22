@@ -22,7 +22,6 @@ class HandleSocket(BittrexSocket):
                 res = [delta for delta in deltas if delta['M'] == symbol]
                 if res:
                     delta = res[0]
-                    logger.info(f"[+] Adding {symbol} - {delta['l']} is active symbol prices")
                     self.trader.active_symbol_prices[symbol] = delta['l']
             #logger.info(f"[+] New symbol prices, {self.trader.active_symbol_prices}")
 
@@ -317,6 +316,7 @@ class BittrexTrader(Trader):
                     buy_price_resp = await self.get_last_price(symbol)
                     if buy_price_resp['error']:
                         logger.error(f"[!] {buy_price_resp['message']}")
+                        continue
                     buy_price = buy_price_resp['result']
                 symbol_open_sell_orders = [order for order in open_orders if symbol in order['Exchange'] and order['OrderType'] == "LIMIT_SELL"]
                 if symbol_open_sell_orders:

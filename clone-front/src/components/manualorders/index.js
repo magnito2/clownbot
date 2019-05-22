@@ -73,7 +73,6 @@ class ManualOrdersForm extends Component{
             }
         }
 
-
     }
 
     handleSubmit(e) {
@@ -176,7 +175,6 @@ class ManualOrdersForm extends Component{
                                         <button type="submit" class="btn btn-primary btn-lg pull-right">PLACE ORDER</button>
                                     </div>}
                             </div>
-
                         </div>
                     </div>
                 </div>

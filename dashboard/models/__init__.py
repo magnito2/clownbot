@@ -45,3 +45,4 @@ from .portfolio import Portfolio
 from .assets import Asset
 from .startups import StartUp
 from .manual_orders import ManualOrder
+from .binance_symbols import BinanceSymbol

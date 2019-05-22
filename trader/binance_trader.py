@@ -1,8 +1,9 @@
 from trader.trader import Trader
-import logging, json, uuid, asyncio, re
+import logging, json, uuid, asyncio, re,os, emoji
 from binance import binance
 from utils import run_in_executor
-from datetime import datetime
+from datetime import datetime, timedelta
+from models import create_session, BinanceSymbol
 
 logger = logging.getLogger('clone.binance_trader')
 binance.__log_enabled = True
@@ -18,8 +19,9 @@ class BinanceTrader(Trader):
             self.streamer.start_user(kwargs.get('api_key'), self.process_user_socket_message)
 
             self.exchange_info = binance.exchange_info()
-
             self.active_symbols = []
+
+            self.fees = 0.001
         except Exception as e:
             logger.exception(e)
 
@@ -40,17 +42,13 @@ class BinanceTrader(Trader):
 
         if not quantity:
             if side == "BUY":
-                quantity_resp = self.get_buy_size(symbol, price)
-                order_id = f"BUY_{str(uuid.uuid4())[:23]}"
-            elif side == "SELL":
-                quantity_resp = self._get_sell_size(symbol, price)
-                order_id = kwargs.get('order_id', f"SELL_{uuid.uuid4()}")
+                quantity_resp = self.quantity_and_price_roundoff(symbol=symbol, price=price, side='BUY')
             else:
-                return {'error': True, 'message': f'Side not understood, side was {side}, should be either BUY or SELL'}
+                quantity_resp = self.quantity_and_price_roundoff(symbol=symbol, price=price, side='SELL')
 
             if quantity_resp['error']:
                 logger.error(quantity_resp['message'])
-                return quantity_resp
+                return {'error' : True, 'message' : quantity_resp['message']}
             quantity = quantity_resp['size']
             price = quantity_resp['price']
 
@@ -58,6 +56,7 @@ class BinanceTrader(Trader):
             quantity_resp = self.quantity_and_price_roundoff(symbol, price, quantity, side)
             if quantity_resp['error']:
                 logger.error(quantity_resp['message'])
+                return {'error': True, 'message': quantity_resp['message']}
             quantity = quantity_resp['size']
             price = quantity_resp['price']
 
@@ -72,35 +71,38 @@ class BinanceTrader(Trader):
             return {'error': True, 'message': f'fill all mandatory fields, symbol: {symbol}, side: {side}, price: {price}, quantity: {quantity}'}
         if not order_type:
             order_type = 'LIMIT'
-        orders = self.account.open_orders(symbol)
-        if orders:
-            logger.debug(f"[+] Symbol {symbol} has open orders.")
-            order_list = [order for order in orders if order['side'] == side]
-            logger.info(f"[!] Cancelling orders {[order['orderId'] for order in order_list]}")
-            for order in order_list:
-                self.account.cancel_order(symbol, order_id=order['orderId'])
 
-        print(f"{'+'*100}")
+        #orders = self.account.open_orders(symbol)
+        #if orders:
+        #    logger.debug(f"[+] Symbol {symbol} has open orders.")
+        #    order_list = [order for order in orders if order['side'] == side]
+        #    logger.info(f"[!] Cancelling orders {[order['orderId'] for order in order_list]}")
+        #    for order in order_list:
+        #       self.account.cancel_order(symbol, order_id=order['orderId'])
+
+        print(f"{'+'*70}")
         print(f"New order, {symbol} {side} {order_type} {quantity} {price} {order_id}")
         resp = self.account.new_order(symbol= symbol, side=side, type=order_type,  quantity=quantity, price=f"{price:.8f}", new_client_order_id=order_id)
 
-        assets_res = self._assets_from_symbol(symbol)
-        if assets_res['error']:
-            base, quote = re.search("([A-Z]+)(BTC|ETH|BNB|USDT)",symbol).groups()
-        else:
-            base, quote = assets_res['result']['base_asset'], assets_res['result']['quote_asset']
+        symbol_info = self.get_symbol_info(symbol)
+
+        print(f"{'+'*100}")
+        print('response is')
+        print(resp)
+        print(f"{'-'*100}")
         if side == "BUY":
             params = {
                 'exchange': self._exchange,
                 'symbol': resp['symbol'],
                 'buy_order_id': resp['clientOrderId'],
                 'buy_time': resp['transactTime'],
-                'quote_asset': quote,
-                'base_asset': base,
+                'quote_asset': symbol_info.quote_asset,
+                'base_asset': symbol_info.base_asset,
                 'buy_price': resp['price'],
                 'buy_quantity': resp['origQty'],
                 'buy_status': resp['status'],
-                'side': 'BUY'
+                'side': 'BUY',
+                'exchange_account_id': self.account_model_id
             }
             return {'error': False, 'result': params}
 
@@ -113,77 +115,73 @@ class BinanceTrader(Trader):
                 'sell_price': resp['price'],
                 'sell_quantity': resp['origQty'],
                 'sell_status': resp['status'],
-                'side': 'SELL'
+                'side': 'SELL',
+                'buy_order_id': kwargs.get('buy_order_id')
             }
             return {'error': False, 'result': params}
 
+    @run_in_executor
+    def a_quantity_and_price_roundoff(self, symbol=None, price=None, quantity=None, side=None):
+        return self.quantity_and_price_roundoff(symbol=symbol, price=price, quantity=quantity, side=side)
+
     def quantity_and_price_roundoff(self, symbol=None, price=None, quantity=None, side=None):
         logger.debug(f"[+] Rounding off price and quantity")
-        symbol_info_res = self._get_symbol_info(symbol)
-        if symbol_info_res['error']:
-            return symbol_info_res
-        symbol_info = symbol_info_res['result']
-        symbol_filters = symbol_info['filters']
+        symbol_info = self.get_symbol_info(symbol)
 
         if side == "BUY":
-            _asset = symbol_info['quoteAsset']
-        elif side == "SELL":
-            _asset = symbol_info['baseAsset']
+            _asset = symbol_info.quote_asset
+        else:
+            _asset = symbol_info.base_asset
 
-        lot_filter_list = [sym_filter for sym_filter in symbol_filters if sym_filter['filterType'] == "LOT_SIZE"]
-        lot_filter = lot_filter_list[0]
-        minQty = float(lot_filter['minQty'])
-        stepSize = float(lot_filter['stepSize'])
-
-        min_notional_filter_list = [sym_filter for sym_filter in symbol_filters if sym_filter['filterType'] == "MIN_NOTIONAL"]
-        min_notional_filter = min_notional_filter_list[0]
-        minNotional = float(min_notional_filter['minNotional'])
+        minQty = float(symbol_info.min_qty)
+        stepSize = float(symbol_info.step_size)
+        minNotional = float(symbol_info.min_notional)
 
         asset_model = self._get_asset_models(_asset)
-        if asset_model:
-            free_balance = float(asset_model.free)
-            locked_balance = float(asset_model.locked)
-        else:
-            # get account balance
-            account_info = self.account.account_info()
-            balances = account_info['balances']
-            asset_balance_list = [bal for bal in balances if bal['asset'] == _asset]
-            if not asset_balance_list:
-                return {'error': True, 'message': 'Asset if not found in account_info, weird'}
-            free_balance = float(asset_balance_list[0]['free'])
-            locked_balance = float(asset_balance_list[0]['locked'])
-
+        if not asset_model:
+            return {'error': True, 'message': 'Zero account balance'}
+        free_balance = float(asset_model.free)
+        locked_balance = float(asset_model.locked)
         total_asset_balance = free_balance + locked_balance
+
         if not total_asset_balance:
             return {'error': True, 'message': 'Zero account balance'}
 
         if quantity:
-            amount_to_trade = quantity
+            base_quantity = float(quantity)
         else:
-            if self.btc_per_order:
-                budget = self.btc_per_order
+            if side == 'BUY':
+                if self.btc_per_order:
+                    budget = self.btc_per_order
+                else:
+                    budget = total_asset_balance * self.percent_size
+                base_quantity = budget / price
             else:
-                budget = total_asset_balance * self.percent_size
-            amount_to_trade = budget / price
+                base_quantity = free_balance * 0.999
 
-        if amount_to_trade < minQty:
+        if base_quantity < minQty:
             return {'error': True, 'message': 'Account balance is too low, consider increasing the percent_size'}
-        if side == "BUY":
-            if amount_to_trade * price > total_asset_balance:
-                return {'error': True, 'message': f'You have place an order to trade more than you can afford, {side}ING {amount_to_trade} '}
-        elif side == "SELL":
-            if amount_to_trade > total_asset_balance:
-                return {'error': True, 'message': f'You have place an order to trade more than you can afford, {side}ING {amount_to_trade} '}
 
-        notional = amount_to_trade * price
+        if side == "BUY":
+            if base_quantity * price > free_balance:
+                return {'error': True, 'message': f'You have place an order to trade more than you can afford and pay fees, {side}ING {base_quantity} '}
+        elif side == "SELL":
+            if base_quantity > free_balance * 0.999:
+                base_quantity = free_balance * 0.999
+                #return {'error': True, 'message': f'You have place an order to trade more than you own and trading fees, {side}ING {base_quantity} '}
+            price = price - price % symbol_info.tick_size + symbol_info.tick_size
+
+        notional = base_quantity * price
         if notional < minNotional:
-            margin_of_safety = (1 + self.stop_loss_trigger * 1.05) #just margins of safety
-            if free_balance / price >= minNotional * margin_of_safety:
-                amount_to_trade = (minNotional / price) * margin_of_safety
+            margin_of_safety = (1 + self.stop_loss_trigger * 1.005) #just margins of safety
+            if side == 'BUY' and free_balance >= minNotional * margin_of_safety:
+                base_quantity = (minNotional / price) * margin_of_safety
+            elif side == 'SELL' and free_balance * price >= minNotional * margin_of_safety:
+                base_quantity = (minNotional / price) * margin_of_safety
             else:
                 return {'error': True,
                         'message': f'Failed the minimum notional value, notional {notional}, minimum notional {minNotional}'}
-        stepped_amount_to_trade = amount_to_trade - (amount_to_trade % stepSize) + stepSize
+        stepped_amount_to_trade = base_quantity - (base_quantity % stepSize) + stepSize
         return {'error': False, 'size': f"{stepped_amount_to_trade:.6f}", 'price': price}
 
     async def warmup(self):
@@ -218,7 +216,7 @@ class BinanceTrader(Trader):
                 last_saved_orders = await self.get_order_models()
                 symbol = f"{asset_name}BTC"
                 last_order_l = [order for order in last_saved_orders if order.symbol == symbol and order.side == "BUY"]
-
+                buy_order_id = 0
                 if last_order_l:
                     logger.info(f"[+] Orders found for symbol {symbol}, {last_order_l}")
                     last_order = max(last_order_l, key=lambda x: x.timestamp.timestamp())
@@ -228,6 +226,8 @@ class BinanceTrader(Trader):
                         order_id = f"SELL_{order_id[1]}"
                     else:
                         order_id = f"SELL_{order_id[0]}"
+                    buy_order_id = last_order.client_order_id
+
                 else:
                     logger.info(f"[!] Did not find a saved order matching the symbol {symbol}")
                     exchange_recent_orders_resp = await self.get_recent_orders(symbol)
@@ -266,6 +266,8 @@ class BinanceTrader(Trader):
                         else:
                             order_id = f"SELL_{order_id[0]}"
 
+                        buy_order_id = last_exchange_order['clientOrderId']
+
                     else: #we cannot trace this symbol anywhere, lets use market price to convert it to BTC.
                         logger.info(f"[!] No recent order information available on {symbol}, defaults to using market price")
                         buy_price_resp = await self.get_last_price(symbol)
@@ -274,19 +276,21 @@ class BinanceTrader(Trader):
                         buy_price = buy_price_resp['result']
                         order_id = f"SELL_{uuid.uuid4()}"
 
-                sell_size_resp = await self.get_sell_size(symbol, float(buy_price) * (1 + self.profit_margin))
+                sell_price = float(buy_price) * (1 + self.profit_margin)
+                sell_size_resp = await self.a_quantity_and_price_roundoff(symbol=symbol, price=sell_price, side='SELL')
                 if sell_size_resp['error']:
                     logger.error(f"{sell_size_resp['message']}")
                     continue
                 sell_size = sell_size_resp['size']
                 order_params = {
-                        'symbol': symbol,
-                        'exchange': self._exchange,
-                        'side': 'SELL',
-                        'price': float(buy_price) * (1+ self.profit_margin),
-                        'quantity': sell_size,
-                        'order_id': order_id
-                    }
+                    'symbol': symbol,
+                    'exchange': self._exchange,
+                    'side': 'SELL',
+                    'price': sell_size_resp['price'],
+                    'quantity': sell_size,
+                    'order_id': order_id,
+                    'buy_order_id': buy_order_id
+                }
                 await self.orders_queue.put(order_params)
         except binance.BinanceError as e:
             if e.code in [-2014, -2015]:
@@ -301,12 +305,25 @@ class BinanceTrader(Trader):
         try:
             resp = self.account.cancel_order(symbol=symbol, order_id=id)
             client_order_id = resp['clientOrderId']
-            self._update_order_model(client_order_id=client_order_id, **resp)
+            _order_params = {
+                    'exchange': self._exchange,
+                    'client_order_id': client_order_id,
+                    'symbol': resp['symbol'],
+                    'price': resp['price'],
+                    'quantity': resp['origQty'],
+                    'type': resp['type'],
+                    'side': resp['side'],
+                    'order_time': datetime.fromtimestamp(int(resp["transactTime"])/1000),
+                    'cummulative_filled_quantity': resp['executedQty'],
+                    'cummulative_quote_asset_transacted': resp["cummulativeQuoteQty"],
+                    'status': resp['status']
+                }
+            self._update_order_model(client_order_id=client_order_id, **_order_params)
         except binance.BinanceError as e:
             logger.error(f"[!] Error cancelling the order, {e} code {e.code}")
             return False
         except Exception as e:
-            logger.error(f"[!] Error cancelling the order, {e} code {e.code}")
+            logger.error(f"[!] Error cancelling the order, {e}")
             return False
         return True
 
@@ -314,144 +331,6 @@ class BinanceTrader(Trader):
     def query_order(self, symbol, id):
         resp = self.account.query_order(symbol=symbol, order_id=id)
         return resp
-
-    def _get_symbol_info(self, symbol):
-        exchange_info = self.exchange_info
-        symbol_info_list = [data for data in exchange_info['symbols'] if data['symbol'] == symbol]
-        if not symbol_info_list:
-            return {'error': True, 'message': 'Symbol was not found in exchange'}
-        return {'error': False, 'result': symbol_info_list[0]}
-
-
-    #@run_in_executor
-    def get_buy_size(self, symbol, price):
-        logger.debug(f"[+] Getting buy size for {symbol} at {price}")
-        symbol_info_res = self._get_symbol_info(symbol)
-        if symbol_info_res['error']:
-            return symbol_info_res
-        symbol_info = symbol_info_res['result']
-        symbol_filters = symbol_info['filters']
-        quote_asset = symbol_info['quoteAsset']
-
-        lot_filter_list = [sym_filter for sym_filter in symbol_filters if sym_filter['filterType'] == "LOT_SIZE"]
-        if not lot_filter_list:
-            return {'error': True, 'message': 'Symbol has no Lot Size Filter'}
-        lot_filter = lot_filter_list[0]
-        minQty = float(lot_filter['minQty'])
-        stepSize = float(lot_filter['stepSize'])
-
-
-        min_notional_filter_list = [sym_filter for sym_filter in symbol_filters if sym_filter['filterType'] == "MIN_NOTIONAL"]
-        if not min_notional_filter_list:
-            return {'error': True, 'message': 'Symbol has no Min Notional Filter'}
-        min_notional_filter = min_notional_filter_list[0]
-        minNotional = float(min_notional_filter['minNotional'])
-
-        price_filter_list = [sym_filter for sym_filter in symbol_filters if
-                             sym_filter['filterType'] == "PRICE_FILTER"]
-
-        price_filter = price_filter_list[0]
-        minPrice = float(price_filter['minPrice'])
-        tickSize = float(price_filter['tickSize'])
-        if price < minPrice:
-            logger.warning(f"[!] The price of {price} is less than min price {minPrice}, changing to minPrice")
-            price = minPrice
-        if not price % tickSize == 0:
-            new_price = price - (price % tickSize) + tickSize
-            logger.warning(f"[!] Round of price from {price} to  {new_price}")
-            price = new_price
-
-        #get account balance
-        account_info = self.account.account_info()
-
-        balances = account_info['balances']
-        asset_balance_list = [bal for bal in balances if bal['asset'] == quote_asset]
-        if not asset_balance_list:
-            return {'error': True, 'message': 'Asset if not found in account_info, weird'}
-        asset_balance = float(asset_balance_list[0]['free']) + float(asset_balance_list[0]['locked'])
-
-        if not asset_balance:
-            return {'error': True, 'message': 'Zero account balance'}
-        if self.btc_per_order:
-            budget = self.btc_per_order
-        else:
-            budget = asset_balance * self.percent_size
-        amount_to_buy = budget/price
-
-        if amount_to_buy < minQty:
-            return {'error': True, 'message': 'Account balance is too low, consider increasing the percent_size'}
-        notional = amount_to_buy * price
-        if notional < minNotional:
-            free_balance = float(asset_balance_list[0]['free'])
-            if free_balance/price >= minNotional:
-                amount_to_buy = minNotional/price
-            else:
-                return {'error': True, 'message': f'Failed the minimum notional value, notional {notional}, minimum notional {minNotional}'}
-        stepped_amount_to_buy = amount_to_buy - (amount_to_buy % stepSize) + stepSize
-        logger.debug(f"[+] The calculated quantity is {stepped_amount_to_buy}, min notation is {minNotional} and notation is {stepped_amount_to_buy * price}")
-        return {'error': False, 'size': f"{stepped_amount_to_buy:.6f}"}
-
-    @run_in_executor
-    def get_sell_size(self, symbol, price):
-        return self._get_sell_size(symbol, price)
-
-    def _get_sell_size(self, symbol, price):
-        price = float(price)
-        symbol_info_res = self._get_symbol_info(symbol)
-        if symbol_info_res['error']:
-            return symbol_info_res
-        symbol_info = symbol_info_res['result']
-
-        symbol_filters = symbol_info['filters']
-        base_asset = symbol_info['baseAsset']
-
-        lot_filter_list = [sym_filter for sym_filter in symbol_filters if sym_filter['filterType'] == "LOT_SIZE"]
-        if not lot_filter_list:
-            return {'error': True, 'message': 'Symbol has no Lot Size Filter'}
-        lot_filter = lot_filter_list[0]
-        minQty = float(lot_filter['minQty'])
-        stepSize = float(lot_filter['stepSize'])
-
-        min_notional_filter_list = [sym_filter for sym_filter in symbol_filters if
-                                    sym_filter['filterType'] == "MIN_NOTIONAL"]
-        if not min_notional_filter_list:
-            return {'error': True, 'message': 'Symbol has no Min Notional Filter'}
-        min_notional_filter = min_notional_filter_list[0]
-        minNotional = float(min_notional_filter['minNotional'])
-
-        price_filter_list = [sym_filter for sym_filter in symbol_filters if
-                                    sym_filter['filterType'] == "PRICE_FILTER"]
-        if not price_filter_list:
-            return {'error': True, 'message': 'Symbol has no Price Filter'}
-        price_filter = price_filter_list[0]
-        minPrice = float(price_filter['minPrice'])
-        tickSize = float(price_filter['tickSize'])
-        if price < minPrice:
-            logger.error(f"[!] The price of {price} is less than min price {minPrice}, changing to minPrice")
-            price = minPrice
-        if not price % tickSize == 0:
-            new_price = price - (price % tickSize) + tickSize
-            logger.error(f"[!] Round of price from {price} to  {new_price}")
-            price = new_price
-
-        # get account balance
-        account_info = self.account.account_info()
-        logger.debug("[+] Got the account info")
-        balances = account_info['balances']
-        asset_balance_list = [bal for bal in balances if bal['asset'] == base_asset]
-        if not asset_balance_list:
-            return {'error': True, 'message': 'Asset if not found in account_info, weird'}
-        asset_balance = float(asset_balance_list[0]['free'])
-        if not asset_balance:
-            return {'error': True, 'message': 'Zero account balance'}
-        notional = asset_balance * price
-        if notional < minNotional:
-            return {'error': True, 'message': f'Failed on minimum Notional, notional {notional}, min notional {minNotional}'}
-        if asset_balance < minQty:
-            return {'error': True,'message': f'Failed on minimum Quantity, quantity {asset_balance}, min quantity {minQty}'}
-        taxed_asset_balance = asset_balance * 0.9975
-        asset_balance = taxed_asset_balance - (taxed_asset_balance % stepSize)
-        return {'error': False, 'size': asset_balance, 'price': price}
 
     async def process_user_socket_message(self, msg):
         # throw it in the database
@@ -480,7 +359,7 @@ class BinanceTrader(Trader):
                     'client_order_id': payload.get('c'),
                     'symbol': payload.get('s'),
                     'price': payload.get('p'),
-                    'quantity': payload.get('l'),
+                    'quantity': payload.get('q'),
                     'commission': payload.get('n'),
                     'commissionAsset': payload.get('N'),
                     'time': payload.get('T'),
@@ -520,6 +399,8 @@ class BinanceTrader(Trader):
                         'buy_order_id': trade_params['client_order_id'],
                         'buy_status': trade_params['status'],
                         'buy_quantity_executed': trade_params['cummulative_filled_quantity'],
+                        'exchange_account_id' : self.account_model_id,
+                        'side': 'BUY'
                     }
                 else:
                     trade_model_params = {
@@ -528,13 +409,14 @@ class BinanceTrader(Trader):
                         'sell_order_id': trade_params['client_order_id'],
                         'sell_status': trade_params['status'],
                         'sell_quantity_executed': trade_params['cummulative_filled_quantity'],
+                        'side': 'SELL'
                     }
 
                 await self.update_order_model(**order_model_params)
                 await asyncio.sleep(3)
                 await self.update_trade(**trade_model_params)
 
-                await self.send_notification(f"{order_model_params['side']} {order_model_params['quantity']} @ {order_model_params['price']}\n {order_model_params['status']}")
+                await self.send_notification(f"{emoji.emojize(':dollar:', use_aliases=True)} {order_model_params['status']}: {order_model_params['side']}ING {order_model_params['quantity']} @ {order_model_params['price']}")
 
                 if trade_params['type'] == "NEW":
                     self.active_symbols.append(order_model_params)
@@ -545,7 +427,7 @@ class BinanceTrader(Trader):
                         sell_price = avg_price * (1 + self.profit_margin)
                         logger.info(f"[+] Trade event, we've bought {trade_params['cummulative_filled_quantity']} at {avg_price}")
                         logger.info(f"[+] Placing a sell for {trade_params['cummulative_filled_quantity']} at {sell_price}")
-                        sell_size_resp = await self.get_sell_size(trade_params['symbol'], sell_price)
+                        sell_size_resp = await self.a_quantity_and_price_roundoff(symbol=trade_params['symbol'], price=sell_price, side='SELL')
                         if sell_size_resp['error']:
                             logger.error(f"[!] {sell_size_resp['message']}")
                         order_id = f"SELL_{trade_params['client_order_id'].split('_')[1]}"
@@ -569,7 +451,7 @@ class BinanceTrader(Trader):
                         logger.warning("[!] You just cancelled a a SELL! You dont cancel a sell. Sleeping for 30s to avoid conflicts")
                         await asyncio.sleep(30)
                         symbol = trade_params['symbol']
-                        sell_size_resp = await self.get_sell_size(symbol, trade_params['price'])
+                        sell_size_resp = await self.a_quantity_and_price_roundoff(symbol=symbol, price=trade_params['price'], side='SELL')
                         if not sell_size_resp['error']:
                             _order_params = {
                                 'symbol': symbol,
@@ -674,6 +556,8 @@ class BinanceTrader(Trader):
             order_models = await self.get_order_models()
             open_order_models = [order_model for order_model in order_models if order_model.status == "NEW"]
             closed_order_models = [order_model for order_model in order_models if order_model.status in ['FILLED', 'PARTIALLY_FILLED']]
+            logger.info("[+] We have the following open orders")
+            logger.info(open_order_models)
             for order in open_order_models:
                 if order.side == 'BUY' and datetime.utcnow() - order.order_time > self.parse_time(self.order_timeout):
                     open_orders = await self.get_open_orders(order.symbol)
@@ -685,19 +569,23 @@ class BinanceTrader(Trader):
                         await self.update_order_model(client_order_id=order.client_order_id, status='CANCELED')
 
                 if order.side == "SELL":
-                    trade_model = await self.get_trade_model(sell_order_id=order.order_id)
+                    logger.info(f"Checking if order {order} should be cancelled")
+                    trade_model = await self.get_trade_model(sell_order_id=order.client_order_id)
                     if trade_model:
+                        print("="*50)
                         buy_price = trade_model.buy_price
                         market_price_resp = await self.get_last_price(order.symbol)
                         if market_price_resp['error']:
                             logger.error(market_price_resp['message'])
                             continue
-                        market_price = market_price_resp['result']
-                        if float(market_price) < float(buy_price) - self.stop_loss_trigger:  # we've gone below our stop loss
+                        market_price = float(market_price_resp['result'])
+                        print(f"Comparing buy {buy_price} and current {market_price} stop loss {self.stop_loss_trigger} stop loss price {buy_price * (1 - self.stop_loss_trigger)}")
+                        if market_price < float(buy_price) * (1 - self.stop_loss_trigger):  # we've gone below our stop loss
+
                             logger.warning(
                                 f"[!] Market price for {order.symbol} has gone below stop loss trigger, placing stop loss sell")
-
-                            order_id = f"SELL_{order.order_id.split('_')[1]}"
+                            await self.cancel_order(order.symbol, order.order_id)
+                            order_id = f"SELL-LOSS_{order.client_order_id.split('_')[1]}"
                             await self.orders_queue.put({
                                 'symbol': order.symbol,
                                 'exchange': 'BINANCE',
@@ -706,6 +594,8 @@ class BinanceTrader(Trader):
                                 'order_id': order_id,
                                 'buy_order_id': trade_model.buy_order_id
                             })
+                    else:
+                        logger.info('order does not have an accompanying buy order, cannot check for stop loss')
 
         except binance.BinanceError as e:
             logger.exception(e)
@@ -715,16 +605,41 @@ class BinanceTrader(Trader):
         except Exception as e:
             logger.exception(e)
 
-    async def assets_from_symbol(self, symbol):
-        return self._assets_from_symbol(symbol)
 
-    def _assets_from_symbol(self, symbol):
-        symbol_info_resp = self._get_symbol_info(symbol)
-        if symbol_info_resp['error']:
-            logger.error(f"[!] {symbol_info_resp['message']}")
-            return {'error': True, 'message': symbol_info_resp['message']}
-        symbol_info = symbol_info_resp['result']
-        return {'error': False, 'result': {'quote_asset': symbol_info['quoteAsset'], 'base_asset': symbol_info['baseAsset']}}
+    def get_symbol_info(self, symbol):
+        if os.path.exists('last_binance_symbols_update'):
+            last_update = datetime.fromtimestamp(os.path.getmtime('last_binance_symbols_update'))
+        else:
+            last_update = datetime.fromtimestamp(0)
+        with create_session() as session:
+            if datetime.now() - last_update > timedelta(days=1) or not session.query(BinanceSymbol).filter_by(name=symbol).first() :
+                exchange_info = self.exchange_info
+                for symbol_data in exchange_info['symbols']:
+                    filters =  symbol_data['filters']
+                    _params = {
+                        'name': symbol_data['symbol'],
+                        'base_asset': symbol_data['baseAsset'],
+                        'quote_asset': symbol_data['quoteAsset'],
+                    }
+                    for filter in filters:
+                        if filter['filterType'] == 'LOT_SIZE':
+                            _params['min_qty'] = filter['minQty']
+                            _params['step_size'] = filter['stepSize']
+                        elif filter['filterType'] == 'MIN_NOTIONAL':
+                            _params['min_notional'] = filter['minNotional']
+                        elif filter['filterType'] == 'PRICE_FILTER':
+                            _params['tick_size'] = filter['tickSize']
+                    if session.query(BinanceSymbol).filter_by(name=_params['name']).first():
+                        session.query(BinanceSymbol).filter_by(name=_params['name']).update(_params)
+                    else:
+                        bin_sym = BinanceSymbol(**_params)
+                        session.add(bin_sym)
+                session.commit()
+                with open('last_binance_symbols_update','w+') as f:
+                    f.write(str(datetime.now()))
+            symbol_model = session.query(BinanceSymbol).filter_by(name=symbol).first()
+            return symbol_model
+
 
     @run_in_executor
     def validate_keys(self):

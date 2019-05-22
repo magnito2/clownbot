@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 # countasync.py
 
@@ -18,7 +17,6 @@ class HttpSignalReciever:
         self.celebro_instance = None
 
     async def handle_command(self, request):
-
         data = await request.json()
         '''
         {
@@ -52,13 +50,12 @@ class HttpSignalReciever:
         elif 'command' in data:
             if data['signal_name'] == "AddAccount":
                 logger.info(f"[+] Adding a new bot")
-                await self.celebro_instance.reload_account(data['account_id'])
+                asyncio.create_task(self.celebro_instance.reload_account(data['account_id']))
         else:
             logger.warning(f"[+] I recieved {data} which I could not understand")
         return web.json_response({'success':True})
 
     async def run(self):
-
         logger.info("HTTP Signal reciever is starting up")
         try:
             app = web.Application()

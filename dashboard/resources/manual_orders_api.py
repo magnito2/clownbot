@@ -1,6 +1,6 @@
 from flask_restful import Resource, abort, reqparse
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from ..models import ExchangeAccount, ManualOrder
+from ..models import ExchangeAccount, ManualOrder, BinanceSymbol
 from .. import  user_datastore, db, app
 import requests
 from ..myutils import get_binance_symbols, get_bittrex_symbols
@@ -101,16 +101,13 @@ class ManualOrdersAPI(Resource):
 
 class ExchangeSymbolsAPI(Resource):
 
-
     def get(self):
 
         args = parser.parse_args()
         exchange = args.get('exchange')
         if exchange == "BINANCE":
-            resp = get_binance_symbols()
-            if resp['error']:
-                abort(500, message=resp['message'])
-            return {'exchange': 'BINANCE', 'symbols': resp['result']}
+            symbols = [symbol.name for symbol in BinanceSymbol.query.all()]
+            return {'exchange': 'BINANCE', 'symbols': symbols}
 
         if exchange == "BITTREX":
             resp = get_bittrex_symbols()

@@ -6,6 +6,9 @@ from datetime import datetime, timedelta
 from models import create_session, Order, Asset, Trade, Portfolio, ExchangeAccount
 from utils import run_in_executor
 
+import os,sys,psutil
+import emoji
+
 logger = logging.getLogger('clone.trader')
 
 class Trader:
@@ -42,10 +45,13 @@ class Trader:
         self.keep_running = True
         self.api_key = kwargs.get('api_key')
 
+        self.last_bot_restart = datetime.utcnow()
+        self.bot_restart_interval = 60*60
+
         if kwargs.get('use_fixed_amount_per_order'):
-            self.btc_per_order = kwargs.get('fixed_amount_per_order')
+            self.btc_per_order = float(kwargs.get('fixed_amount_per_order'))
         if kwargs.get('percent_size'):
-            self.percent_size = kwargs.get('percent_size') if kwargs.get('percent_size') < 1 else kwargs.get('percent_size') / 100
+            self.percent_size = float(kwargs.get('percent_size')) if kwargs.get('percent_size') < 1 else float(kwargs.get('percent_size')) / 100
 
     async def run(self):
         '''
@@ -53,11 +59,11 @@ class Trader:
         :return:
         1. stream for account events, tell when a trade has occured
         '''
-        await self.send_notification(f'U+1F916 {self._exchange} bot has been started, you will be recieving updates now')
+        await self.send_notification(f'{emoji.emojize(":white_check_mark:", use_aliases=True)} {self._exchange} bot has been started, you will be recieving updates now')
 
         is_valid = await self._validate_keys()
         if not is_valid:
-            await self.send_notification(f"[!] The API key and Secret for {self._exchange} is INVALID. Please provide valid keys.")
+            await self.send_notification(f"{emoji.emojize(':bangbang:', use_aliases=True)} The API key and Secret for {self._exchange} is INVALID. Please provide valid keys.")
             logging.error(f"[!] Invalid Keys provide for account {self._exchange} - {self.api_key}")
             return
 
@@ -83,14 +89,13 @@ class Trader:
                         resp = await self.create_order(**order_params)
                         if resp['error']:
                             logger.error(resp['message'])
-                            await self.send_notification(f"U+1F621 , Attempt to create an order failed because {resp['message']}")
+                            await self.send_notification(f"{emoji.emojize(':x:', use_aliases=True)} , Attempt to create an order failed because {resp['message']}")
                             continue
                         logger.info(resp)
                         result = resp['result']
-                        del result['side']
                         self.streamer.add_trades(result['symbol'], self.process_symbol_stream)
                         await self.update_trade(**result)
-                        await self.send_notification(f"New order created, {result} ")
+                        await self.send_notification(f"{emoji.emojize(':white_check_mark:', use_aliases=True)} New order created, {result} ")
                         continue #go to next loop
                     else:
                         logger.debug(f'[!] Order not understood, {order_params}')
@@ -98,6 +103,9 @@ class Trader:
 
             except asyncio.TimeoutError:
                 logger.info(f"[*] {self._exchange} Regular maintenance")
+                if (datetime.utcnow() - self.last_bot_restart).seconds > self.bot_restart_interval:
+                    self.restart_bot()
+
                 await self.routine_check()
                 if (datetime.utcnow() - self.last_portfolio_update_time).seconds > self.portfolio_update_interval:
                     self.last_portfolio_update_time = datetime.utcnow()
@@ -305,14 +313,25 @@ class Trader:
     def update_trade(self, **kwargs):
         with create_session() as session:
             side = kwargs.get('side')
+            exchange_account_id = kwargs.get('exchange_account_id')
             buy_order_id = kwargs.get('buy_order_id')
+            if not side:
+                logger.error('Must provide a side')
+                return
+
+            del kwargs['side']
+
             if side == 'BUY':
                 if not buy_order_id:
                     logger.error('[!] Include buy order id')
+                    return
                 trade = session.query(Trade).filter_by(buy_order_id=buy_order_id).first()
                 if trade:
                     session.query(Trade).filter_by(buy_order_id=buy_order_id).update(kwargs)
                 else:
+                    if not exchange_account_id:
+                        logger.error('[!] Include buy order id')
+                        return
                     trade = Trade(**kwargs)
                     session.add(trade)
 
@@ -321,17 +340,24 @@ class Trader:
                     trade = session.query(Trade).filter_by(buy_order_id=buy_order_id).first()
                     if trade:
                         session.query(Trade).filter_by(buy_order_id=buy_order_id).update(kwargs)
+                    else:
+                        logger.error(f'Buy order of id {buy_order_id} not found')
                 else:
                     sell_order_id = kwargs.get('sell_order_id')
-                    if sell_order_id:
-                        trade = session.query(Trade).filter_by(sell_order_id=sell_order_id).first()
-                        if trade:
-                            session.query(Trade).filter_by(sell_order_id=sell_order_id).update(kwargs)
+                    if not sell_order_id:
+                        logger.error('Must include sell order id')
+                        return
+                    trade = session.query(Trade).filter_by(sell_order_id=sell_order_id).first()
+                    if trade:
+                        session.query(Trade).filter_by(sell_order_id=sell_order_id).update(kwargs)
+                    else:
+                        logger.error('If sell is new, include buy order id to link it to a buy, else, include sell order it.\n '
+                                     'The provided sell order id was not found')
             session.commit()
 
     async def send_notification(self, notification):
         if self.outgoing_message_queue and self.user_tg_id and self.receive_notifications:  # inform user about the new order
-            await self.outgoing_message_queue.put({'id': self.user_tg_id, 'message': notification})
+            await self.outgoing_message_queue.put({'id': self.user_tg_id, 'message': notification, 'sender': self._exchange})
 
     async def update_portfolio(self):
         """
@@ -387,3 +413,17 @@ class Trader:
             account_model.valid_keys = is_valid
             session.commit()
 
+    def restart_bot(self):
+        """Restarts the current program, with file objects and descriptors
+              cleanup
+           """
+        logger.info("[!] Restarting the bot")
+        try:
+            p = psutil.Process(os.getpid())
+            for handler in p.open_files() + p.connections():
+                os.close(handler.fd)
+        except Exception as e:
+            logger.error(e)
+
+        python = sys.executable
+        os.execl(python, python, *sys.argv)
