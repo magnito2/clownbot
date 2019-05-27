@@ -51,6 +51,7 @@ _URLS = {
     "ticker_books": __v1_url("ticker/allBookTickers"),
     "ticker_24hr": __v1_url("/ticker/24hr"),
     "ticker_price": __v3_url('/ticker/price'),
+    'avgPrice' : __v3_url('avgPrice'),
 
     # Account
     "user_data_stream": __v1_url("userDataStream"),
@@ -262,6 +263,10 @@ def ticker_price(symbol):
     resp = _geturl_json(_URLS['ticker_price'], {'symbol': symbol})
     return resp
 
+def avgPrice(symbol):
+    '''Get the average price of the symbol of symbols in the market'''
+    resp = _geturl_json(_URLS['avgPrice'], {'symbol': symbol})
+    return resp
 
 def ticker_order_books():
     """ Gets the best price/quantity on the order book for all market symbols
@@ -479,31 +484,39 @@ class Streamer:
 
         _log("Opening stream - " + url)
 
-        async with websockets.connect(url) as socket:
-            self.__open_sockets.add(id)
+        reconnect_count = 0
+        while reconnect_count < 10:
+            try:
+                async with websockets.connect(url) as socket:
+                    self.__open_sockets.add(id)
+                    reconnect_count = 0
+                    while id in self.__open_sockets:
+                        recv_task = asyncio.Task(socket.recv())
 
-            while id in self.__open_sockets:
-                recv_task = asyncio.Task(socket.recv())
+                        self.__pending_reads[id] = recv_task
+                        data = await recv_task
+                        data = json.loads(data)
+                        del self.__pending_reads[id]
 
-                self.__pending_reads[id] = recv_task
-                data = await recv_task
-                data = json.loads(data)
-                del self.__pending_reads[id]
+                        symbol = data["s"]
+                        if id.find("depth") == 0:
+                            self.__update_order_book(symbol, data)
+                        elif id.find("kline") == 0:
+                            if self.__candlesticks[symbol] == None:
+                                self.__candlesticks[symbol] = []
+                            self.__candlesticks[symbol].append(data["k"])
+                        elif id.find("trades") == 0:
+                            if self.__trades[symbol] == None:
+                                self.__trades[symbol] = []
+                            self.__trades[symbol].append(data)
 
-                symbol = data["s"]
-                if id.find("depth") == 0:
-                    self.__update_order_book(symbol, data)
-                elif id.find("kline") == 0:
-                    if self.__candlesticks[symbol] == None:
-                        self.__candlesticks[symbol] = []
-                    self.__candlesticks[symbol].append(data["k"])
-                elif id.find("trades") == 0:
-                    if self.__trades[symbol] == None:
-                        self.__trades[symbol] = []
-                    self.__trades[symbol].append(data)
-
-                await callback(data)
-                await(asyncio.sleep(.1))
+                        await callback(data)
+                        await(asyncio.sleep(.1))
+            except websockets.ConnectionClosed as e:
+                _log(str(e))
+                await asyncio.sleep(10)
+                reconnect_count += 1
+                print("Reconnecting")
 
     def __update_order_book(self, symbol, changes):
         book = self.__order_books[symbol]
