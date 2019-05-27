@@ -77,7 +77,7 @@ class Celebro:
                         continue
                     kwargs['subscribed_signals'].append('ManualOrder')
                     bittrex_trader = BittrexTrader(**kwargs)
-                    self.exchange_traders.append(bittrex_trader)
+                    #self.exchange_traders.append(bittrex_trader) temporarily disabled bittrex traders
 
             startup = StartUp()
             session.add(startup)

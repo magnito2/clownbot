@@ -46,7 +46,7 @@ class Trader:
         self.api_key = kwargs.get('api_key')
 
         self.last_bot_restart = datetime.utcnow()
-        self.bot_restart_interval = 60*60
+        self.bot_restart_interval = 60*60*3
 
         if kwargs.get('use_fixed_amount_per_order'):
             self.btc_per_order = float(kwargs.get('fixed_amount_per_order'))

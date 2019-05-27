@@ -157,7 +157,7 @@ class BinanceTrader(Trader):
                     budget = total_asset_balance * self.percent_size
                 base_quantity = budget / price
             else:
-                base_quantity = free_balance * 0.999
+                base_quantity = free_balance
 
         if base_quantity < minQty:
             return {'error': True, 'message': 'Account balance is too low, consider increasing the percent_size'}
@@ -166,8 +166,8 @@ class BinanceTrader(Trader):
             if base_quantity * price > free_balance:
                 return {'error': True, 'message': f'You have place an order to trade more than you can afford and pay fees, {side}ING {base_quantity} '}
         elif side == "SELL":
-            if base_quantity > free_balance * 0.999:
-                base_quantity = free_balance * 0.999
+            if base_quantity > free_balance:
+                base_quantity = free_balance
                 #return {'error': True, 'message': f'You have place an order to trade more than you own and trading fees, {side}ING {base_quantity} '}
             price = price - price % symbol_info.tick_size + symbol_info.tick_size
 
@@ -179,9 +179,17 @@ class BinanceTrader(Trader):
             elif side == 'SELL' and free_balance * price >= minNotional * margin_of_safety:
                 base_quantity = (minNotional / price) * margin_of_safety
             else:
-                return {'error': True,
-                        'message': f'Failed the minimum notional value, notional {notional}, minimum notional {minNotional}'}
-        stepped_amount_to_trade = base_quantity - (base_quantity % stepSize) + stepSize
+                if side == 'SELL':
+                    lowest_price = minNotional/base_quantity
+                    price = lowest_price - lowest_price % symbol_info.tick_size + symbol_info.tick_size
+                else:
+                    return {'error': True,
+                        'message': f'Failed the minimum notional value, notional {notional}, minimum notional {minNotional}, symbol {symbol} side{side}'}
+        if side == 'BUY':
+            stepped_amount_to_trade = base_quantity - (base_quantity % stepSize) + stepSize
+        else:
+            stepped_amount_to_trade = base_quantity - (base_quantity % stepSize)
+
         return {'error': False, 'size': f"{stepped_amount_to_trade:.6f}", 'price': price}
 
     async def warmup(self):
@@ -586,6 +594,8 @@ class BinanceTrader(Trader):
                                 f"[!] Market price for {order.symbol} has gone below stop loss trigger, placing stop loss sell")
                             await self.cancel_order(order.symbol, order.order_id)
                             order_id = f"SELL-LOSS_{order.client_order_id.split('_')[1]}"
+                            sell_price = market_price * 0.995
+                            sell_qty_resp = self.a_quantity_and_price_roundoff(symbol=order.symbol, price=sell_price, side='SELL')
                             await self.orders_queue.put({
                                 'symbol': order.symbol,
                                 'exchange': 'BINANCE',
