@@ -139,13 +139,13 @@ class BinanceTrader(Trader):
 
         asset_model = self._get_asset_models(_asset)
         if not asset_model:
-            return {'error': True, 'message': 'Zero account balance'}
+            return {'error': True, 'message': f'{side} {quantity} {symbol} @ {price} Zero account balance'}
         free_balance = float(asset_model.free)
         locked_balance = float(asset_model.locked)
         total_asset_balance = free_balance + locked_balance
 
         if not total_asset_balance:
-            return {'error': True, 'message': 'Zero account balance'}
+            return {'error': True, 'message': f'{side} {quantity} {symbol} @ {price}Zero account balance'}
 
         if quantity:
             base_quantity = float(quantity)
@@ -161,7 +161,7 @@ class BinanceTrader(Trader):
 
         if side == "BUY":
             if base_quantity * price > free_balance:
-                return {'error': True, 'message': f'You have place an order to trade more than you can afford and pay fees, {side}ING {base_quantity} '}
+                return {'error': True, 'message': f' {side} {base_quantity} {symbol} @ {price} You have placed an order to {side} more than the account balance, acc bal {free_balance} '}
         elif side == "SELL":
             if base_quantity > free_balance:
                 base_quantity = free_balance
@@ -188,7 +188,7 @@ class BinanceTrader(Trader):
                             percent_price_filter = percent_price_filter[0]
                             avg_market_price = binance.avgPrice(symbol)
                             if lowest_price > float(avg_market_price['price']) * float(percent_price_filter['multiplierUp']):
-                                return {'error': True, 'message': f'Order will fail percent price filter \n{symbol} {side} \ntrading price{lowest_price} \navg market price {avg_market_price["price"]} \nmultiplier-up {percent_price_filter["multiplierUp"]}'}
+                                return {'error': True, 'message': f'Order will fail percent price filter \n{symbol} \nside{side} \norder price{lowest_price} \navg market price {avg_market_price["price"]} \nmultiplier-up {percent_price_filter["multiplierUp"]}'}
 
                     price = lowest_price - lowest_price % symbol_info.tick_size + symbol_info.tick_size
                 else:

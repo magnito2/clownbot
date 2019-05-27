@@ -89,7 +89,7 @@ class Trader:
                         resp = await self.create_order(**order_params)
                         if resp['error']:
                             logger.error(resp['message'])
-                            await self.send_notification(f"{emoji.emojize(':x:', use_aliases=True)} , Attempt to create an order failed because {resp['message']}")
+                            await self.send_notification(f"{emoji.emojize(':x:', use_aliases=True)} , Create order failed\n {resp['message']}")
                             continue
                         logger.info(resp)
                         result = resp['result']
