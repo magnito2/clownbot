@@ -183,7 +183,7 @@ class BinanceTrader(Trader):
                     if xch_sym_info:
                         xch_sym_info = xch_sym_info[0]
                         xch_filters = xch_sym_info['filters']
-                        percent_price_filter = [filter for filter in xch_filters if filter['filterType'] == 'PRICE_FILTER']
+                        percent_price_filter = [filter for filter in xch_filters if filter['filterType'] == 'PERCENT_PRICE']
                         if percent_price_filter:
                             percent_price_filter = percent_price_filter[0]
                             avg_market_price = binance.avgPrice(symbol)
