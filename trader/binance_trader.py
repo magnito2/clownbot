@@ -178,6 +178,18 @@ class BinanceTrader(Trader):
             else:
                 if side == 'SELL':
                     lowest_price = minNotional/base_quantity
+                    symbols_info = self.exchange_info['symbols']
+                    xch_sym_info = [inf for inf in symbols_info if inf['symbol'] == symbol]
+                    if xch_sym_info:
+                        xch_sym_info = xch_sym_info[0]
+                        xch_filters = xch_sym_info['filters']
+                        percent_price_filter = [filter for filter in xch_filters if filter['filterType'] == 'PRICE_FILTER']
+                        if percent_price_filter:
+                            percent_price_filter = percent_price_filter[0]
+                            avg_market_price = binance.avgPrice(symbol)
+                            if lowest_price > float(avg_market_price['price']) * float(percent_price_filter['multiplierUp']):
+                                return {'error': True, 'message': f'Order will fail percent price filter \n{symbol} {side} \ntrading price{lowest_price} \navg market price {avg_market_price["price"]} \nmultiplier-up {percent_price_filter["multiplierUp"]}'}
+
                     price = lowest_price - lowest_price % symbol_info.tick_size + symbol_info.tick_size
                 else:
                     return {'error': True,
