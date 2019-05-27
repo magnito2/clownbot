@@ -159,9 +159,6 @@ class BinanceTrader(Trader):
             else:
                 base_quantity = free_balance
 
-        if base_quantity < minQty:
-            return {'error': True, 'message': 'Account balance is too low, consider increasing the percent_size'}
-
         if side == "BUY":
             if base_quantity * price > free_balance:
                 return {'error': True, 'message': f'You have place an order to trade more than you can afford and pay fees, {side}ING {base_quantity} '}
@@ -189,6 +186,9 @@ class BinanceTrader(Trader):
             stepped_amount_to_trade = base_quantity - (base_quantity % stepSize) + stepSize
         else:
             stepped_amount_to_trade = base_quantity - (base_quantity % stepSize)
+
+        if stepped_amount_to_trade < minQty:
+            return {'error': True, 'message': f'{symbol}, trading qty {stepped_amount_to_trade}, min qty {minQty} Account balance is too low'}
 
         return {'error': False, 'size': f"{stepped_amount_to_trade:.6f}", 'price': price}
 
