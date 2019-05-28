@@ -243,16 +243,17 @@ class Trader:
     def _get_asset_models(self, asset=None):
         with create_session() as session:
             if asset:
-                asset_model = session.query(Asset).filter_by(exchange=self._exchange).filter_by(name=asset).first()
+                asset_model = session.query(Asset).filter_by(exchange=self._exchange).filter_by(exchange_account_id=self.account_model_id).filter_by(name=asset).first()
                 return asset_model
-            asset_models = session.query(Asset).filter_by(exchange=self._exchange).all()
+            asset_models = session.query(Asset).filter_by(exchange=self._exchange).filter_by(exchange_account_id=self.account_model_id).all()
             return asset_models
 
     @run_in_executor
     def update_asset_balance(self, msg):
         with create_session() as session:
+            account_model = session.query(ExchangeAccount).filter_by(id=self.account_model_id).first()
             asset_name = msg['name']
-            asset_model = session.query(Asset).filter_by(exchange=self._exchange).filter_by(name=asset_name).first()
+            asset_model = session.query(Asset).filter_by(exchange=self._exchange).filter_by(exchange_account_id=self.account_model_id).filter_by(name=asset_name).first()
             if asset_model:
                 asset_model.name = asset_name
                 asset_model.free = msg['free']
@@ -260,18 +261,19 @@ class Trader:
                 asset_model.timestamp = datetime.utcnow()
             else:
                 asset_model = Asset(exchange=self._exchange, name=msg['name'], free=msg['free'], locked=msg['locked'])
-            session.add(asset_model)
+                account_model.assets.append(asset_model)
             session.commit()
 
     @run_in_executor
     def update_asset_balances(self, assets):
         with create_session() as session:
+            account_model = session.query(ExchangeAccount).filter_by(id=self.account_model_id).first()
             if not type(assets) == list:
                 logger.error(f"assets must be a list")
                 return
             for asset in assets:
                 asset_name = asset['name']
-                asset_model = session.query(Asset).filter_by(exchange=self._exchange).filter_by(name=asset_name).first()
+                asset_model = session.query(Asset).filter_by(exchange=self._exchange).filter_by(exchange_account_id=self.account_model_id).filter_by(name=asset_name).first()
                 if asset_model:
                     asset_model.name = asset_name
                     asset_model.free = asset['free']
@@ -279,7 +281,7 @@ class Trader:
                     asset_model.timestamp = datetime.utcnow()
                 else:
                     asset_model = Asset(exchange=self._exchange, name=asset['name'], free=asset['free'], locked=asset['locked'])
-                    session.add(asset_model)
+                    account_model.assets.append(asset_model)
             session.commit()
 
     @run_in_executor

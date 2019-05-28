@@ -6,6 +6,7 @@ class Asset(db.Model):
     __tablename__="assets"
 
     id = db.Column(db.Integer, primary_key=True)
+    exchange_account_id = db.Column(db.Integer, db.ForeignKey('exchange_account.id'), nullable=False)
     exchange = db.Column(db.String(64))
     name = db.Column(db.String(64))
     free = db.Column(db.String(128))

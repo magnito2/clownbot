@@ -22,6 +22,7 @@ class ExchangeAccount(db.Model):
     orders = db.relationship('Order', backref='exchange_account', lazy=True)
     trades = db.relationship('Trade', backref='exchange_account', lazy=True)
     manual_orders = db.relationship('ManualOrder', backref='exchange_account', lazy=True)
+    assets = db.relationship('Asset', backref='exchange_account', lazy=True)
     valid_keys = db.Column(db.Boolean)
 
     def serialize(self):

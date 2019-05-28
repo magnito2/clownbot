@@ -29,3 +29,4 @@ class ExchangeAccount(Base):
     trades = relationship('Trade', backref='exchange_account', lazy=True)
     manual_orders = relationship('ManualOrder', backref='exchange_account', lazy=True)
     valid_keys = Column(Boolean)
+    assets = relationship('Asset', backref='exchange_account', lazy=True)

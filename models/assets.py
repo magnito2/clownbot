@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, DateTime, String, Float
+from sqlalchemy import Column, Integer, DateTime, String, ForeignKey
 from datetime import datetime
 
 from . import Base
@@ -8,6 +8,7 @@ class Asset(Base):
     __tablename__="assets"
 
     id = Column(Integer, primary_key=True)
+    exchange_account_id = Column(Integer, ForeignKey('exchange_account.id'), nullable=False)
     exchange = Column(String(64))
     name = Column(String(64))
     free = Column(String(128))
