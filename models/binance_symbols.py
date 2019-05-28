@@ -16,6 +16,8 @@ class BinanceSymbol(Base):
     min_notional = Column(Float)
     timestamp = Column(DateTime, index=True, default=datetime.utcnow)
     tick_size = Column(Float)
+    multiplierUp =  Column(Float)
+    multiplierDown = Column(Float)
 
     def __repr__(self):
         return f"<Binance-Symbol({self.name}>"

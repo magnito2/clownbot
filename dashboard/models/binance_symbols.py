@@ -14,6 +14,8 @@ class BinanceSymbol(db.Model):
     min_notional = db.Column(db.Float)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     tick_size = db.Column(db.Float)
+    multiplierUp = db.Column(db.Float)
+    multiplierDown = db.Column(db.Float)
 
     def serialize(self):
         return {

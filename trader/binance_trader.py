@@ -227,91 +227,6 @@ class BinanceTrader(Trader):
                 })
             await self.update_asset_balances(bal_list)
 
-
-            for asset in balances:
-                if asset['asset'] == "BTC":
-                    continue
-                asset_name = asset['asset']
-
-                last_saved_orders = await self.get_order_models()
-                symbol = f"{asset_name}BTC"
-                last_order_l = [order for order in last_saved_orders if order.symbol == symbol and order.side == "BUY"]
-                buy_order_id = 0
-                if last_order_l:
-                    logger.info(f"[+] Orders found for symbol {symbol}, {last_order_l}")
-                    last_order = max(last_order_l, key=lambda x: x.timestamp.timestamp())
-                    buy_price = last_order.price
-                    order_id = last_order.client_order_id.split("_")
-                    if len(order_id) == 2:
-                        order_id = f"SELL_{order_id[1]}"
-                    else:
-                        order_id = f"SELL_{order_id[0]}"
-                    buy_order_id = last_order.client_order_id
-
-                else:
-                    logger.info(f"[!] Did not find a saved order matching the symbol {symbol}")
-                    exchange_recent_orders_resp = await self.get_recent_orders(symbol)
-                    if exchange_recent_orders_resp['error']:
-                        logger.error(f"[!] Ran into an error fetching recent orders for {symbol}, {exchange_recent_orders_resp['message']}")
-                        continue
-                    exchange_recent_orders = exchange_recent_orders_resp['result']
-
-                    for order in exchange_recent_orders:
-                        order_model_params = {
-                            'exchange': self._exchange,
-                            'order_id': order['orderId'],
-                            'client_order_id': order['clientOrderId'],
-                            'symbol': order['symbol'],
-                            'price': order['price'],
-                            'quantity': order['origQty'],
-                            'type': order['type'],
-                            'side': order['side'],
-                            'order_time': datetime.fromtimestamp(int(order['time'])/1000),
-                            'status': order['status'],
-                            'cummulative_filled_quantity': order['executedQty'],
-                            'cummulative_quote_asset_transacted': order['cummulativeQuoteQty'],
-                            'timestamp': datetime.fromtimestamp(int(order['time'])/1000)
-                        }
-                        await self.update_order_model(**order_model_params)
-
-                    recent_buys = [order for order in exchange_recent_orders if order['side'] == 'BUY']
-                    if recent_buys:
-                        last_exchange_order = max(recent_buys, key=lambda x: int(x['time']))
-                        buy_price = last_exchange_order['price']
-                        logger.info(f"[+] Last price for {symbol} is {buy_price}")
-
-                        order_id = last_exchange_order['clientOrderId'].split("_")
-                        if len(order_id) == 2:
-                            order_id = f"SELL_{order_id[1]}"
-                        else:
-                            order_id = f"SELL_{order_id[0]}"
-
-                        buy_order_id = last_exchange_order['clientOrderId']
-
-                    else: #we cannot trace this symbol anywhere, lets use market price to convert it to BTC.
-                        logger.info(f"[!] No recent order information available on {symbol}, defaults to using market price")
-                        buy_price_resp = await self.get_last_price(symbol)
-                        if buy_price_resp['error']:
-                            logger.error(f"[!] Error occured getting last price for {symbol}, {buy_price_resp['message']}")
-                        buy_price = buy_price_resp['result']
-                        order_id = f"SELL_{uuid.uuid4()}"
-
-                sell_price = float(buy_price) * (1 + self.profit_margin)
-                sell_size_resp = await self.a_quantity_and_price_roundoff(symbol=symbol, price=sell_price, side='SELL')
-                if sell_size_resp['error']:
-                    logger.error(f"{sell_size_resp['message']}")
-                    continue
-                sell_size = sell_size_resp['size']
-                order_params = {
-                    'symbol': symbol,
-                    'exchange': self._exchange,
-                    'side': 'SELL',
-                    'price': sell_size_resp['price'],
-                    'quantity': sell_size,
-                    'order_id': order_id,
-                    'buy_order_id': buy_order_id
-                }
-                await self.orders_queue.put(order_params)
         except binance.BinanceError as e:
             if e.code in [-2014, -2015]:
                 await self.invalidate_keys()
@@ -602,17 +517,20 @@ class BinanceTrader(Trader):
                         print(f"Comparing buy {buy_price} and current {market_price} stop loss {self.stop_loss_trigger} stop loss price {buy_price * (1 - self.stop_loss_trigger)}")
                         if market_price < float(buy_price) * (1 - self.stop_loss_trigger):  # we've gone below our stop loss
 
+                            if order.price < market_price * 1.005:
+                                continue #no need to stop stop-losses
                             logger.warning(
                                 f"[!] Market price for {order.symbol} has gone below stop loss trigger, placing stop loss sell")
+
+                            sell_price = market_price * 0.995
                             await self.cancel_order(order.symbol, order.order_id)
                             order_id = f"SELL-LOSS_{order.client_order_id.split('_')[1]}"
-                            sell_price = market_price * 0.995
-                            sell_qty_resp = self.a_quantity_and_price_roundoff(symbol=order.symbol, price=sell_price, side='SELL')
+
                             await self.orders_queue.put({
                                 'symbol': order.symbol,
                                 'exchange': 'BINANCE',
                                 'side': 'SELL',
-                                'price': market_price * 0.995,
+                                'price': sell_price,
                                 'order_id': order_id,
                                 'buy_order_id': trade_model.buy_order_id
                             })
@@ -651,6 +569,9 @@ class BinanceTrader(Trader):
                             _params['min_notional'] = filter['minNotional']
                         elif filter['filterType'] == 'PRICE_FILTER':
                             _params['tick_size'] = filter['tickSize']
+                        elif filter['filterType'] == 'PERCENT_PRICE' :
+                            _params['multiplierUp'] = filter['multiplierUp']
+                            _params['multiplierDown'] = filter['multiplierDown']
                     if session.query(BinanceSymbol).filter_by(name=_params['name']).first():
                         session.query(BinanceSymbol).filter_by(name=_params['name']).update(_params)
                     else:
