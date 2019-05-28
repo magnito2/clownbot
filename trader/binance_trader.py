@@ -188,7 +188,7 @@ class BinanceTrader(Trader):
                             percent_price_filter = percent_price_filter[0]
                             avg_market_price = binance.avgPrice(symbol)
                             if lowest_price > float(avg_market_price['price']) * float(percent_price_filter['multiplierUp']):
-                                return {'error': True, 'message': f'Order will fail percent price filter \n{symbol} \nside{side} \norder price{lowest_price} \navg market price {avg_market_price["price"]} \nmultiplier-up {percent_price_filter["multiplierUp"]}'}
+                                return {'error': True, 'message': f'{side} {base_quantity} {symbol} @ {price}\n Order will fail percent price filter \n{symbol} \nside{side} \norder price{lowest_price} \navg market price {avg_market_price["price"]} \nmultiplier-up {percent_price_filter["multiplierUp"]}'}
 
                     price = lowest_price - lowest_price % symbol_info.tick_size + symbol_info.tick_size
                 else:
