@@ -174,6 +174,7 @@ class BinanceTrader(Trader):
             if side == 'BUY' and free_balance >= minNotional * margin_of_safety:
                 base_quantity = (minNotional / price) * margin_of_safety
             elif side == 'SELL' and free_balance * price >= minNotional * margin_of_safety:
+                logger.debug(f"before crash, minNotional {minNotional}, price {price}, margina of safety {margin_of_safety}")
                 base_quantity = (minNotional / price) * margin_of_safety
             else:
                 if side == 'SELL':
