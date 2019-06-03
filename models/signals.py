@@ -16,6 +16,7 @@ class Signal(Base):
     name = Column(String(64))
     timestamp = Column(DateTime, index=True, default=datetime.utcnow)
     exchange_accounts = relationship('ExchangeAccount', secondary=exchange_accounts_signals, backref='acc_signals')
+    trade_signals = relationship('TradeSignal', backref='signal', lazy=True)
 
     def __repr__(self):
         return f"<Signal({self.id}, {self.timestamp})"

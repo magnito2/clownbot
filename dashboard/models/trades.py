@@ -23,6 +23,7 @@ class Trade(db.Model):
     sell_status = db.Column(db.String(64))
     buy_time = db.Column(db.DateTime)
     sell_time = db.Column(db.DateTime)
+    trade_signal_id = db.Column(db.Integer, db.ForeignKey('trade_signals.id'), nullable=True)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
 
     def serialize(self):
@@ -34,7 +35,7 @@ class Trade(db.Model):
             'buy_order_id': self.buy_order_id,
             'sell_order_d': self.sell_order_id,
             'buy_quantity': self.buy_quantity,
-            'sell_quantity': self.sell_quantity
+            'sell_quantity': self.sell_quantity,
         }
 
     def __repr__(self):

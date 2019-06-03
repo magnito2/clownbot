@@ -43,3 +43,4 @@ from .signals import Signal
 from .portfolio import Portfolio
 from .manual_orders import ManualOrder
 from .binance_symbols import BinanceSymbol
+from .trade_signals import TradeSignal

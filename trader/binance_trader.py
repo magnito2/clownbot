@@ -480,6 +480,14 @@ class BinanceTrader(Trader):
         except Exception as e:
             return {'error': True, 'message': str(e)}
 
+    @run_in_executor
+    def get_avg_price(self, symbol):
+        try:
+            resp = binance.avgPrice(symbol)
+            return {'error': False, 'result': resp['price']}
+        except Exception as e:
+            return {'error': True, 'message': str(e)}
+
     async def routine_check(self):
         '''
         check order has not expired
@@ -507,9 +515,8 @@ class BinanceTrader(Trader):
                     logger.info(f"Checking if order {order} should be cancelled")
                     trade_model = await self.get_trade_model(sell_order_id=order.client_order_id)
                     if trade_model:
-                        print("="*50)
                         buy_price = trade_model.buy_price
-                        market_price_resp = await self.get_last_price(order.symbol)
+                        market_price_resp = await self.get_avg_price(order.symbol)
                         if market_price_resp['error']:
                             logger.error(market_price_resp['message'])
                             continue
@@ -536,6 +543,27 @@ class BinanceTrader(Trader):
                             })
                     else:
                         logger.info('order does not have an accompanying buy order, cannot check for stop loss')
+            for order_model in closed_order_models:
+                if order_model.side == 'BUY':
+                    trade_model = await self.get_trade_model(buy_order_id=order_model.client_order_id)
+                    if trade_model and not trade_model.sell_status in ['NEW','FILLED','PARTIALLY_FILLED']:
+                        logger.info(f'[+] BUY {trade_model.buy_quantity} {trade_model.symbol} @{trade_model.buy_price} Found an order with completed buy bt no sell')
+                        buy_price = trade_model.buy_price
+                        sell_price = buy_price * (1 + self.profit_margin)
+                        sell_size_resp = await self.a_quantity_and_price_roundoff(symbol=trade_model.symbol,
+                                                                                  price=sell_price, side='SELL')
+                        if sell_size_resp['error']:
+                            logger.error(f"[!] {sell_size_resp['message']}")
+                        order_id = f"SELL_{trade_model.buy_order_id.split('_')[1]}"
+                        await self.orders_queue.put({
+                            'symbol': trade_model.symbol,
+                            'exchange': 'BINANCE',
+                            'side': 'SELL',
+                            'price': sell_size_resp['price'],
+                            'quantity': float(sell_size_resp['size']),
+                            'order_id': order_id,
+                            'buy_order_id': trade_model.buy_order_id
+                        })
 
         except binance.BinanceError as e:
             logger.exception(e)

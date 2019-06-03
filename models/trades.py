@@ -26,6 +26,7 @@ class Trade(Base):
     sell_status = Column(String(64))
     buy_time = Column(DateTime)
     sell_time = Column(DateTime)
+    trade_signal_id = Column(Integer, ForeignKey('trade_signals.id'), nullable=True)
     timestamp = Column(DateTime, index=True, default=datetime.utcnow)
 
     def serialize(self):

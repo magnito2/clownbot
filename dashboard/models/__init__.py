@@ -46,3 +46,4 @@ from .assets import Asset
 from .startups import StartUp
 from .manual_orders import ManualOrder
 from .binance_symbols import BinanceSymbol
+from .trade_signals import TradeSignal

@@ -5,6 +5,7 @@ The telegram api. Recieves signals from telegram and broadcasts events.
 from telethon import TelegramClient, events
 import logging, asyncio
 from .tg_signals import CQSScalpingFree, MagnitoCrypto, QualitySignalsChannel
+from models import create_session, TradeSignal, Signal
 
 logger = logging.getLogger('clone.tg')
 logging.getLogger('clone.tg').setLevel(level=logging.DEBUG)
@@ -15,8 +16,8 @@ api_hash = '318d4db283d08faa09644784e5e7a360'
 
 class MyTelegramClient:
 
-    def __init__(self, binance_queues, bittrex_queues, signal_channels_list):
-        self.client = TelegramClient('session_name', api_id, api_hash)
+    def __init__(self, binance_queues, bittrex_queues, signal_channels_list, tg_kwargs):
+        self.client = TelegramClient('clown_bot', tg_kwargs['API_ID'], tg_kwargs['API_HASH'])
         self.binance_queues = binance_queues
         self.bittrex_queues = bittrex_queues
         self.outgoing_messages_queue = asyncio.Queue()
@@ -39,6 +40,13 @@ class MyTelegramClient:
 
             if signal:
                 if signal['side'] == "BUY":
+                    signal['trade_signal_id'] = None
+                    with create_session() as session:
+                        signaller = session.query(Signal).filter_by(name=signal['signal_name']).first()
+                        ts = TradeSignal(signal_name=signaller.name, exchange=signal['exchange'], symbol=signal['symbol'], side=signal['side'], price=signal['price'])
+                        signaller.trade_signals.append(ts)
+                        session.commit()
+                        signal['trade_signal_id'] = ts.id
                     if signal['exchange'] == "BINANCE":
                         logger.info(f"********Putting {signal} into queues")
                         for queue in self.binance_queues:

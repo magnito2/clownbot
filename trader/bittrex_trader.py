@@ -231,13 +231,9 @@ class BittrexTrader(Trader):
                     self.keep_running = False
                     return
             balances = balances_resp['result']
-            print("\n")
-            await self.print_asset_balances(balances)
-            print("\n")
-            await self.print_open_orders()
-            print("\n")
 
             print(f"[++] Asset balances are {balances}")
+            asset_bals = []
             for asset in balances:
                 balance_model_msg = {
                     'name': asset['Currency'],
@@ -245,7 +241,8 @@ class BittrexTrader(Trader):
                     'free': asset['Available'],
                     'locked': float(asset['Balance']) - float(asset['Available'])
                 }
-                await self.update_asset_balance(balance_model_msg)
+                asset_bals.append(balance_model_msg)
+            await self.update_asset_balances(asset_bals)
 
             open_orders_resp = await self.get_open_orders()
             if open_orders_resp['error']:
@@ -274,61 +271,6 @@ class BittrexTrader(Trader):
             if order_history_resp['error']:
                 logger.error(f"[!] {order_history_resp['message']}")
             order_history = order_history_resp.get('result')
-
-            for order in order_history:
-                print(f"Order Order order")
-                print(order)
-                print("End order\n")
-                _params = {
-                    'exchange': self._exchange,
-                    'order_id': order['OrderUuid'],
-                    'client_order_id': order['OrderUuid'],
-                    'symbol': order['Exchange'],
-                    'price': order['Price'],
-                    'quantity': order['Quantity'],
-                    'type': order['OrderType'],
-                    'side': order['OrderType'],
-                    'order_time': datetime.strptime(f"{order['TimeStamp']}Z",'%Y-%m-%dT%H:%M:%S.%fZ'),
-                    'cummulative_filled_quantity': float(order['Quantity']) - float(order['QuantityRemaining']),
-                    'status': 'FILLED' if order['Closed'] else 'NEW',
-                    'timestamp': order.get('TimeStamp')
-                }
-                await self.update_order_model(**_params)
-
-            for asset in balances:
-                logger.debug(f"asset {asset}")
-                if asset['Currency'] == "BTC":
-                    continue
-                asset_name = asset['Currency']
-                symbol = f"BTC-{asset_name}"
-                buy_order_id = None
-                symbol_buy_orders = [order for order in order_history if asset_name in order['Exchange'] and order['OrderType'] == "LIMIT_BUY"]
-                if symbol_buy_orders:
-                    last_buy_order = max(symbol_buy_orders, key=lambda x: int(datetime.strptime(f"{x['TimeStamp']}Z",'%Y-%m-%dT%H:%M:%S.%fZ').timestamp()))
-                    buy_price = last_buy_order['Price']
-                    symbol = last_buy_order['Exchange']
-                    buy_order_id = last_buy_order['OrderUuid']
-                    logger.info(f"[+] Buy price for {symbol} is {buy_price}")
-                else:
-                    logger.info("[!] Did not find the symbol in the orderbook, getting the market price.")
-                    buy_price_resp = await self.get_last_price(symbol)
-                    if buy_price_resp['error']:
-                        logger.error(f"[!] {buy_price_resp['message']}")
-                        continue
-                    buy_price = buy_price_resp['result']
-                symbol_open_sell_orders = [order for order in open_orders if symbol in order['Exchange'] and order['OrderType'] == "LIMIT_SELL"]
-                if symbol_open_sell_orders:
-                    last_sell_order = max(symbol_open_sell_orders, key=lambda x: int(datetime.strptime(f"{x['Opened']}Z",'%Y-%m-%dT%H:%M:%S.%fZ').timestamp()))
-                    if last_sell_order['Quantity'] >= asset['Available'] * 0.99:
-                        continue
-                order_params = {
-                    'symbol': symbol,
-                    'exchange': self._exchange,
-                    'side': 'SELL',
-                    'price': float(buy_price) * (1 + self.profit_margin),
-                    'buy_order_id': buy_order_id
-                }
-                await self.orders_queue.put(order_params)
 
         except Exception as e:
             logger.exception(e)
@@ -367,42 +309,6 @@ class BittrexTrader(Trader):
                 return {'error': True, 'message': f'account balance not sufficient to place order, account balance {base_asset_bal_res["result"]["Available"]}, minimum order size 0.0005'}
         amount_to_buy = budget / price
         return {'error': False, 'size': f"{amount_to_buy:.6f}", 'quote':base_asset, 'base': symbol_info['MarketCurrency']}
-
-    async def sync_db(self):
-        try:
-            logger.info("[+] Synching the DB")
-            historical_orders_resp = await self.get_recent_orders()
-            saved_orders = await self.get_order_models()
-            saved_orders_uuid = [saved_order.order_id for saved_order in saved_orders]
-            if historical_orders_resp['error']:
-                logger.error(f"[!] Failed to get historical orders")
-                return
-            historical_orders = historical_orders_resp['result']
-            logger.info(f"[+] Fetched {len(historical_orders)} orders")
-            for order in historical_orders:
-                if order['OrderUuid'] in saved_orders_uuid:
-                    continue
-                order_delta = {
-                    'exchange': 'Bittrex',
-                    'order_id': order.get('OrderUuid'),
-                    'client_order_id': order.get('OrderUuid'),
-                    'symbol': order.get('Exchange'),
-                    'price': order.get('Price'),
-                    'quantity': order.get('Quantity'),
-                    'type': order.get('OrderType'),
-                    'side': order.get('OrderType'),
-                    'stop_price': '',
-                    'commission': order.get('Commission'),
-                    'commission_asset': '',
-                    'order_time': order.get('TimeStamp'),
-                    'cummulative_filled_quantity': float(order.get('Quantity')) - float(order.get('QuantityRemaining')),
-                    'cummulative_quote_asset_transacted': '',
-                    'status': ''
-                }
-                logger.info(f"[+] Saving {order_delta['order_id']} into db")
-                await self.update_order_model(**order_delta)
-        except Exception as e:
-            logger.exception(e)
 
     def get_sell_size(self, symbol, price):
         markets = self.account.get_markets()
@@ -602,7 +508,7 @@ class BittrexTrader(Trader):
             logger.info(f"{order['Exchange']} {order['OrderType']} Quantity {order['Quantity']} Remaining{order['QuantityRemaining']}")
 
     async def routine_check(self):
-        #order get open orders every 10 minutes, else open orders should be updated via websockets trade event.
+        #order get open orders every 5 minutes, else open orders should be updated via websockets trade event.
         try:
             orders_res = await self.get_open_orders()
             if orders_res['error']:
