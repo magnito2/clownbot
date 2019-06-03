@@ -350,8 +350,10 @@ class BinanceTrader(Trader):
                 await self.update_order_model(**order_model_params)
                 await asyncio.sleep(3)
                 await self.update_trade(**trade_model_params)
-
-                await self.send_notification(f"{emoji.emojize(':dollar:', use_aliases=True)} {order_model_params['status']}: {order_model_params['side']}ING {order_model_params['quantity']} @ {order_model_params['price']}")
+                print("*"*100)
+                print(f"Our symbol is {order_model_params['symbol']}")
+                print("*"*100)
+                await self.send_notification(f"{emoji.emojize(':dollar:', use_aliases=True)} {order_model_params['status']}: {order_model_params['side']}ING {order_model_params['quantity']} {order_model_params['symbol']}@ {order_model_params['price']}")
 
                 if trade_params['type'] == "NEW":
                     self.active_symbols.append(order_model_params)
