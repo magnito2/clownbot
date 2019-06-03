@@ -22,7 +22,9 @@ class Celebro:
     def __init__(self, config):
 
         logger.info('***** clown bot celebro starting *****')
-
+        self.tg_kwargs = {}
+        self.tg_kwargs['API_ID'] = config.get('DEFAULT','Telegram_API_ID')
+        self.tg_kwargs['API_HASH'] = config.get('DEFAULT','Telegram_API_HASH')
         self.exchange_traders = []
         with create_session() as session:
             exchange_account_models = session.query(ExchangeAccount).all()
@@ -102,7 +104,7 @@ class Celebro:
         bittrex_traders_queues = [trader.orders_queue for trader in self.exchange_traders if trader._exchange == "BITTREX"]
 
         magcrypt = MagnitoCrypto(QualitySignalsChannel)
-        self.tg_client = MyTelegramClient(binance_trader_queues, bittrex_traders_queues, [magcrypt, CQSScalpingFree, QualitySignalsChannel])
+        self.tg_client = MyTelegramClient(binance_trader_queues, bittrex_traders_queues, [magcrypt, CQSScalpingFree, QualitySignalsChannel], self.tg_kwargs)
         producers = [asyncio.create_task(self.tg_client.run())]
 
         for trader in self.exchange_traders: #pass tg_client message queue to every traderxc
