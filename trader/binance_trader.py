@@ -146,6 +146,8 @@ class BinanceTrader(Trader):
 
         if not total_asset_balance:
             return {'error': True, 'message': f'{side} {quantity} {symbol} @ {price}Zero account balance'}
+        if not free_balance:
+            return {'error': True, 'message': f'{side} {quantity} {symbol} @ {price}All your assets are locked in trades'}
 
         if quantity:
             base_quantity = float(quantity)
@@ -174,10 +176,12 @@ class BinanceTrader(Trader):
             if side == 'BUY' and free_balance >= minNotional * margin_of_safety:
                 base_quantity = (minNotional / price) * margin_of_safety
             elif side == 'SELL' and free_balance * price >= minNotional * margin_of_safety:
-                logger.debug(f"before crash, minNotional {minNotional}, price {price}, margina of safety {margin_of_safety}")
+                logger.debug(f"before crash, minNotional {minNotional}, price {price}, margin of safety {margin_of_safety}")
                 base_quantity = (minNotional / price) * margin_of_safety
             else:
                 if side == 'SELL':
+                    logger.debug(
+                        f"before crash, minNotional {minNotional}, price {price}, margin of safety {margin_of_safety} base_quantity {base_quantity}")
                     lowest_price = minNotional/base_quantity
                     symbols_info = self.exchange_info['symbols']
                     xch_sym_info = [inf for inf in symbols_info if inf['symbol'] == symbol]
