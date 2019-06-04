@@ -391,19 +391,8 @@ class BinanceTrader(Trader):
 
                 if trade_params['type'] == "CANCELED":
                     if trade_params['side'] == "SELL":
-                        logger.warning("[!] You just cancelled a a SELL! You dont cancel a sell. Sleeping for 30s to avoid conflicts")
-                        await asyncio.sleep(30)
-                        symbol = trade_params['symbol']
-                        sell_size_resp = await self.a_quantity_and_price_roundoff(symbol=symbol, price=trade_params['price'], side='SELL')
-                        if not sell_size_resp['error']:
-                            _order_params = {
-                                'symbol': symbol,
-                                'exchange': self._exchange,
-                                'side' : 'SELL',
-                                'quantity': sell_size_resp['size'],
-                                'price': sell_size_resp['price']
-                            }
-                            await self.orders_queue.put(_order_params)
+                        logger.warning("[!] You just cancelled a a SELL! You dont cancel a sell.")
+
                     ol = [o for o in self.active_symbols if o['client_order_id'] == trade_params['client_order_id']]
                     if ol:
                         o = ol[0]
