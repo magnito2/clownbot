@@ -555,8 +555,24 @@ class BinanceTrader(Trader):
                 if order_model.side == 'BUY':
                     trade_model = await self.get_trade_model(buy_order_id=order_model.client_order_id)
                     if trade_model and not trade_model.sell_status in ['NEW','FILLED','PARTIALLY_FILLED']:
+                        #update the trade model.
                         logger.info(f'[+] BUY {trade_model.buy_quantity} {trade_model.symbol} @{trade_model.buy_price} Found an order with completed buy bt no sell')
-                        buy_price = trade_model.buy_price
+                        if trade_model.buy_price:
+                            buy_price = trade_model.buy_price
+                        else:
+                            if order_model.price:
+                                buy_price = order_model.price
+                            else:
+                                try:
+                                    xch_order = self.account.query_order(order_model.symbol, orig_client_order_id=order_model.client_order_id)
+                                    if xch_order:
+                                        buy_price = float(xch_order['price'])
+                                        if not buy_price:
+                                            logger.error(f'Could not find the buy price of {trade_model.buy_quantity} {trade_model.symbol} @{trade_model.buy_price}')
+                                            continue
+                                except Exception as e:
+                                    logger.exception(e)
+                                    continue
                         sell_price = buy_price * (1 + self.profit_margin)
                         sell_size_resp = await self.a_quantity_and_price_roundoff(symbol=trade_model.symbol,
                                                                                   price=sell_price, side='SELL')
