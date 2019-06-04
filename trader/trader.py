@@ -282,6 +282,10 @@ class Trader:
                 else:
                     asset_model = Asset(exchange=self._exchange, name=asset['name'], free=asset['free'], locked=asset['locked'])
                     account_model.assets.append(asset_model)
+            asset_names = [asset.name for asset in assets]
+            for asset in account_model.assets:
+                if asset.name not in asset_names:
+                    session.delete(asset)
             session.commit()
 
     @run_in_executor
