@@ -177,7 +177,7 @@ class BinanceTrader(Trader):
                 base_quantity = (minNotional / price) * margin_of_safety
             elif side == 'SELL' and free_balance * price >= minNotional * margin_of_safety:
                 logger.debug(f"before crash, minNotional {minNotional}, price {price}, margin of safety {margin_of_safety}")
-                base_quantity = (minNotional / price) * margin_of_safety
+                base_quantity = free_balance
             else:
                 if side == 'SELL':
                     logger.debug(
@@ -523,7 +523,7 @@ class BinanceTrader(Trader):
 
                             if order.price < market_price * 1.005 or 'SELL-LOSS' in order.client_order_id:
                                 continue #no need to stop stop-losses
-                                
+
                             logger.warning(
                                 f"[!] Market price for {order.symbol} has gone below stop loss trigger, placing stop loss sell")
 

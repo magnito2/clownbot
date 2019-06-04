@@ -43,6 +43,7 @@ async def main():
     logger.info('[+] Getting it started')
     config = configparser.ConfigParser()
     config.read('config.ini')
+    logger.setLevel(config.getint('DEFAULT','LOG_LEVEL'))
     celebro_instance = Celebro(config)
     await celebro_instance.run()
 
