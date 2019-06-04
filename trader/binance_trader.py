@@ -563,6 +563,14 @@ class BinanceTrader(Trader):
                         if sell_size_resp['error']:
                             logger.error(f"[!] {sell_size_resp['message']}")
                         order_id = f"SELL_{trade_model.buy_order_id.split('_')[1]}"
+                        print("*"*100)
+                        print(f"Sell size response {sell_size_resp}")
+                        print("*"*100)
+                        try:
+                            price = sell_size_resp['price']
+                        except Exception as e:
+                            exit()
+                            
                         await self.orders_queue.put({
                             'symbol': trade_model.symbol,
                             'exchange': 'BINANCE',
