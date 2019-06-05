@@ -206,6 +206,8 @@ class BinanceTrader(Trader):
 
         if stepped_amount_to_trade < minQty:
             return {'error': True, 'message': f'{symbol}, trading qty {stepped_amount_to_trade}, min qty {minQty} Account balance is too low'}
+        if stepped_amount_to_trade * price < minNotional:
+            return {'error': True,'message': f'{symbol}, trading qty {stepped_amount_to_trade}, price {price} minNotional {minNotional} Fails minimum Notional'}
 
         return {'error': False, 'size': f"{stepped_amount_to_trade:.6f}", 'price': price}
 
@@ -540,7 +542,7 @@ class BinanceTrader(Trader):
                                 'buy_order_id': trade_model.buy_order_id
                             })
                     else:
-                        logger.info('order does not have an accompanying buy order, cannot check for stop loss')
+                        logger.info(f'Sell Order {order.client_order_id} - {order.side} {order.quantity} {order.symbol}@{order.price} does not have an accompanying Buy order, cannot check for stop loss')
             for order_model in closed_order_models:
                 if order_model.side == 'BUY':
                     trade_model = await self.get_trade_model(buy_order_id=order_model.client_order_id)
@@ -554,7 +556,7 @@ class BinanceTrader(Trader):
                                 buy_price = order_model.price
                             else:
                                 try:
-                                    xch_order = self.account.query_order(order_model.symbol, orig_client_order_id=order_model.client_order_id)
+                                    xch_order = self.account.query_order(order_model.symbol, order_id=order_model.order_id)
                                     if xch_order:
                                         buy_price = float(xch_order['price'])
                                         if not buy_price:
