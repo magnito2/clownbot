@@ -47,6 +47,7 @@ class Trader:
 
         self.last_bot_restart = datetime.utcnow()
         self.bot_restart_interval = 60*60*3
+        self.routine_check_interval = 60*60
 
         if kwargs.get('use_fixed_amount_per_order'):
             self.btc_per_order = float(kwargs.get('fixed_amount_per_order'))
@@ -73,7 +74,7 @@ class Trader:
         while self.keep_running:
             logger.info(f"[+] {self._exchange} Awaiting the next order")
             try:
-                _params = await asyncio.wait_for(self.orders_queue.get(), timeout=60)
+                _params = await asyncio.wait_for(self.orders_queue.get(), timeout=self.routine_check_interval)
                 logger.info(f"{self._exchange} recieved {_params}")
                 if _params and 'exchange' in _params:
                     order_params = _params

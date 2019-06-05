@@ -8,7 +8,7 @@ from .tg_signals import CQSScalpingFree, MagnitoCrypto, QualitySignalsChannel
 from models import create_session, TradeSignal, Signal
 
 logger = logging.getLogger('clone.tg')
-logging.getLogger('clone.tg').setLevel(level=logging.DEBUG)
+#logging.getLogger('clone.tg').setLevel(level=logging.DEBUG)
 logging.getLogger('telethon').setLevel(level=logging.ERROR)
 api_id = 895830
 api_hash = '318d4db283d08faa09644784e5e7a360'
