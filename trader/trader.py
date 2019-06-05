@@ -28,9 +28,9 @@ class Trader:
         self.orders_queue = asyncio.Queue()
         self.percent_size = None
         self.btc_per_order = None
-        self.profit_margin = kwargs.get('profit_margin') if kwargs.get('profit_margin') < 1 else kwargs.get('profit_margin') / 100
+        self.profit_margin = kwargs.get('profit_margin') / 100
         self.order_timeout = kwargs.get('order_timeout')
-        self.stop_loss_trigger = kwargs.get('stop_loss_trigger') if kwargs.get('stop_loss_trigger') < 1 else kwargs.get('stop_loss_trigger') / 100
+        self.stop_loss_trigger = kwargs.get('stop_loss_trigger') / 100
         self.streamer = None
         self.active_symbols = []
         self.open_orders = []
@@ -52,7 +52,7 @@ class Trader:
         if kwargs.get('use_fixed_amount_per_order'):
             self.btc_per_order = float(kwargs.get('fixed_amount_per_order'))
         if kwargs.get('percent_size'):
-            self.percent_size = float(kwargs.get('percent_size')) if kwargs.get('percent_size') < 1 else float(kwargs.get('percent_size')) / 100
+            self.percent_size = float(kwargs.get('percent_size')) / 100
 
     async def run(self):
         '''
@@ -90,7 +90,7 @@ class Trader:
                         resp = await self.create_order(**order_params)
                         if resp['error']:
                             logger.error(resp['message'])
-                            await self.send_notification(f"{emoji.emojize(':x:', use_aliases=True)} , Create order failed\n {resp['message']}")
+                            #await self.send_notification(f"{emoji.emojize(':x:', use_aliases=True)} , Create order failed\n {resp['message']}")
                             continue
                         logger.info(resp)
                         result = resp['result']
