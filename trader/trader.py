@@ -47,7 +47,7 @@ class Trader:
 
         self.last_bot_restart = datetime.utcnow()
         self.bot_restart_interval = 60*60*3
-        self.routine_check_interval = 60*60
+        self.routine_check_interval = 60*5
 
         if kwargs.get('use_fixed_amount_per_order'):
             self.btc_per_order = float(kwargs.get('fixed_amount_per_order'))
@@ -107,10 +107,11 @@ class Trader:
                 if (datetime.utcnow() - self.last_bot_restart).seconds > self.bot_restart_interval:
                     self.restart_bot()
 
-                await self.routine_check()
                 if (datetime.utcnow() - self.last_portfolio_update_time).seconds > self.portfolio_update_interval:
                     self.last_portfolio_update_time = datetime.utcnow()
                     await self.update_portfolio()
+
+                await self.routine_check()
 
             except asyncio.QueueEmpty as e:
                 logger.error("The queue is empty")
