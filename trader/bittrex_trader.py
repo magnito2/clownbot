@@ -200,7 +200,8 @@ class BittrexTrader(Trader):
                     'buy_price': price,
                     'buy_quantity': quantity,
                     'buy_status': 'NEW',
-                    'side': 'BUY'
+                    'side': 'BUY',
+                    'exchange_account_id': self.account_model_id
                 }
                 return {'error': False, 'result': params}
 
@@ -232,7 +233,6 @@ class BittrexTrader(Trader):
                     return
             balances = balances_resp['result']
 
-            print(f"[++] Asset balances are {balances}")
             asset_bals = []
             for asset in balances:
                 balance_model_msg = {
@@ -527,7 +527,7 @@ class BittrexTrader(Trader):
             for order in orders:
 
                 #check for timed out orders, applies to buy orders only
-                if order['OrderType'] == 'LIMIT_BUY' and datetime.utcnow() - datetime.strptime(f"{order['Opened']}Z",'%Y-%m-%dT%H:%M:%S.%fZ') > self.parse_time(self.order_timeout):
+                if order['OrderType'] == 'LIMIT_BUY' and datetime.utcnow() - datetime.fromtimestamp(float(order['Opened'])/1000) > self.parse_time(self.order_timeout):
                     logger.info(f"[!] Order {order['OrderUuid']} has expired, cancelling")
                     await self.cancel_order(order['Exchange'], order['OrderUuid'])
 

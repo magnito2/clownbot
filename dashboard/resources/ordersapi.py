@@ -42,4 +42,4 @@ class OrdersAPI(Resource):
                 orders = exchange_account.orders
                 orders_resp = [order.serialize() for order in orders if order.status != 'CANCELED']
                 all_orders += orders_resp
-        return all_orders
+            return all_orders

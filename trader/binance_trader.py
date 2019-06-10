@@ -374,8 +374,17 @@ class BinanceTrader(Trader):
                         logger.info(f"[+] Placing a sell for {trade_params['cummulative_filled_quantity']} at {sell_price}")
                         sell_size_resp = await self.a_quantity_and_price_roundoff(symbol=trade_params['symbol'], price=sell_price, side='SELL')
                         if sell_size_resp['error']:
-                            logger.error(f"[!] {sell_size_resp['message']}")
-                        order_id = f"SELL_{trade_params['client_order_id'].split('_')[1]}"
+                            await asyncio.sleep(30)
+                            sell_size_resp = await self.a_quantity_and_price_roundoff(symbol=trade_params['symbol'],
+                                                                                      price=sell_price, side='SELL')
+                            if sell_size_resp['error']:
+                                await self.warmup()
+                                sell_size_resp = await self.a_quantity_and_price_roundoff(symbol=trade_params['symbol'],
+                                                                                          price=sell_price, side='SELL')
+                                if sell_size_resp['error']:
+                                    logger.error(f"[!] {sell_size_resp['message']}")
+                                    return {'error': True, 'message': sell_size_resp['message']}
+                        order_id = f"SELL_{trade_params['client_order_id'].split('_')[1]}" if len(trade_params['client_order_id'].split('_')) > 1 else f"SELL_{trade_params['client_order_id'][:30]}"
                         await self.orders_queue.put({
                             'symbol': trade_params['symbol'],
                             'exchange': 'BINANCE',
