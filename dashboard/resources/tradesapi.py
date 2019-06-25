@@ -40,4 +40,5 @@ class TradesAPI(Resource):
                 trades = exchange_account.trades
                 trades_resp = [trade.serialize() for trade in trades if trade.buy_status != 'CANCELED']
                 all_trades += trades_resp
+                print("the trades are ", all_trades)
             return all_trades

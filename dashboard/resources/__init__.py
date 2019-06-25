@@ -5,6 +5,7 @@ from .api_settings import ExchangeSettings
 from .signalsapi import SignalsAPI, CheckedSignalsAPI
 from .portfolioapi import PortfolioAPI, BTCValuesAPI
 from .manual_orders_api import ManualOrdersAPI, ExchangeSymbolsAPI
+from .tradesapi import TradesAPI
 
 api.add_resource(UserRegistration, '/api/registration')
 api.add_resource(UserLogin, '/api/login')
@@ -23,3 +24,5 @@ api.add_resource(PortfolioAPI, '/api/portfolios')
 api.add_resource(BTCValuesAPI, '/api/portfolios/btc-values')
 api.add_resource(ManualOrdersAPI, '/api/manualorders')
 api.add_resource(ExchangeSymbolsAPI, '/api/exchangesymbols')
+
+api.add_resource(TradesAPI, '/api/trades/')

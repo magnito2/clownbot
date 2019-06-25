@@ -1,5 +1,6 @@
 from .. import db
 from datetime import datetime
+from .trade_signals import TradeSignal
 
 class Trade(db.Model):
 
@@ -27,7 +28,9 @@ class Trade(db.Model):
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
 
     def serialize(self):
+
         return {
+            'id': self.id,
             'exchange': self.exchange,
             'symbol': self.symbol,
             'buy_price' : self.buy_price,
@@ -36,7 +39,10 @@ class Trade(db.Model):
             'sell_order_d': self.sell_order_id,
             'buy_quantity': self.buy_quantity,
             'sell_quantity': self.sell_quantity,
+            'signal': self.trade_signal.signal_name if self.trade_signal else "",
+            'PNL': 0 if self.sell_price is None or self.sell_quantity is None or self.buy_price is None or self.buy_price is None else round(self.sell_price * self.sell_quantity - self.buy_price * self.buy_quantity, 6),
+            'sellStatus': self.sell_status
         }
 
     def __repr__(self):
-        return f"<Order({self.id}, BOID {self.buy_order_id}, SOID {self.sell_order_id}, BP {self.buy_price}, SP {self.sell_price}, BQ {self.buy_quantity})"
+        return f"<Trade({self.id}, BOID {self.buy_order_id}, SOID {self.sell_order_id}, BP {self.buy_price}, SP {self.sell_price}, BQ {self.buy_quantity})"

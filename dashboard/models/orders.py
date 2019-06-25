@@ -41,7 +41,7 @@ class Order(db.Model):
             'stop_price': self.stop_price,
             'commission': self.commission,
             'commission_asset': self.commission_asset,
-            'order_time': self.order_time.isoformat(),
+            'order_time': self.order_time.isoformat() if self.order_time else "",
             'cummulative_filled_quantity': self.cummulative_filled_quantity,
             'cummulative_quote_asset_transacted': self.cummulative_quote_asset_transacted,
             'status': self.status,

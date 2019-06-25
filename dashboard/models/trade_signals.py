@@ -26,4 +26,4 @@ class TradeSignal(db.Model):
         }
 
     def __repr__(self):
-        return f"<Trade Signal({self.id}, {self.exchange}, {self.symbol}, {self.side}, {self.price}, {self.quantity})"
+        return f"<Trade Signal({self.signal_name})"
