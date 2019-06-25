@@ -530,12 +530,14 @@ class BinanceTrader(Trader):
                     trade_model = await self.get_trade_model(sell_order_id=order.client_order_id)
                     if trade_model:
                         buy_price = trade_model.buy_price
+                        if not buy_price:
+                            logger.error("The buy price in the trade model is zero")
+                            continue
                         market_price_resp = await self.get_avg_price(order.symbol)
                         if market_price_resp['error']:
                             logger.error(market_price_resp['message'])
                             continue
                         market_price = float(market_price_resp['result'])
-                        print(f"The buy price is {buy_price}")
                         print(f"Comparing buy {buy_price} and current {market_price} stop loss {self.stop_loss_trigger} stop loss price {buy_price * (1 - self.stop_loss_trigger)}")
                         if market_price < float(buy_price) * (1 - self.stop_loss_trigger):  # we've gone below our stop loss
 
