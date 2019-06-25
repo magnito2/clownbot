@@ -586,7 +586,7 @@ class BinanceTrader(Trader):
                         if sell_size_resp['error']:
                             logger.error(f"[!] {sell_size_resp['message']}")
                             continue
-                        order_id = f"SELL_{trade_model.buy_order_id.split('_')[1]}"
+                        order_id = f"SELL_{trade_model.buy_order_id.split('_')[1][:23]}"
 
                         await self.orders_queue.put({
                             'symbol': trade_model.symbol,
