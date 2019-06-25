@@ -4,7 +4,8 @@ import { connect } from 'react-redux';
 import { ordersActions, settingsActions, portfoliosActions, tradesActions } from '../../actions';
 import {allDeepEqual} from "../../helpers/compare-equal-arrays";
 import {PortfolioChart} from "../sub-components/portfolio.chart";
-import {IndexOrdersTable} from "../sub-components/index-orders-table";
+import {IndexOrdersTable, IndexTradesTable} from "../sub-components";
+
 
 class IndexPage extends Component {
 
@@ -26,7 +27,6 @@ class IndexPage extends Component {
         }
     }
     componentDidMount(){
-        this.props.dispatch(ordersActions.getAll());
         this.props.dispatch(settingsActions.get());
         this.props.dispatch(portfoliosActions.get());
         this.props.dispatch(tradesActions.getAll());
@@ -54,6 +54,7 @@ class IndexPage extends Component {
 
     render(){
         const {orders} = this.props;
+        const {trades} = this.props;
 
         return (
             <MainWrapper>
@@ -82,7 +83,7 @@ class IndexPage extends Component {
                         </div>
                     </div>
                 </div>
-                <IndexOrdersTable orders = {orders} itemsCountPerPage={10}/>
+                <IndexTradesTable trades = {trades} itemsCountPerPage={10}/>
             </MainWrapper>);
     }
 }
@@ -91,10 +92,12 @@ function mapStateToProps(state) {
     const { list } = state.orders;
     const {settings} = state;
     const {portfolio} = state;
+    const trades = state.trades.list;
     return {
         orders : list,
         settings,
-        portfolio
+        portfolio,
+        trades
     };
 }
 
