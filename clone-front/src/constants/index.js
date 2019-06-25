@@ -4,3 +4,4 @@ export * from './settings.constants';
 export * from './signals.constants';
 export * from './portfolio.constants';
 export * from './manualorders.constants';
+export * from './trades.constants';

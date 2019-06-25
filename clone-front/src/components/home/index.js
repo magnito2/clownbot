@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { MainWrapper } from '../wrappers/main';
 import { connect } from 'react-redux';
-import { ordersActions, settingsActions, portfoliosActions } from '../../actions';
+import { ordersActions, settingsActions, portfoliosActions, tradesActions } from '../../actions';
 import {allDeepEqual} from "../../helpers/compare-equal-arrays";
 import {PortfolioChart} from "../sub-components/portfolio.chart";
 import {IndexOrdersTable} from "../sub-components/index-orders-table";
@@ -28,7 +28,8 @@ class IndexPage extends Component {
     componentDidMount(){
         this.props.dispatch(ordersActions.getAll());
         this.props.dispatch(settingsActions.get());
-        this.props.dispatch(portfoliosActions.get())
+        this.props.dispatch(portfoliosActions.get());
+        this.props.dispatch(tradesActions.getAll());
     }
 
     componentWillReceiveProps(nextProps) {

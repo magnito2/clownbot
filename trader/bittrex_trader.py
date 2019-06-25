@@ -201,9 +201,10 @@ class BittrexTrader(Trader):
                     'buy_quantity': quantity,
                     'buy_status': 'NEW',
                     'side': 'BUY',
-                    'exchange_account_id': self.account_model_id
+                    'exchange_account_id': self.account_model_id,
+                    'trade_signal_id': kwargs.get('trade_signal_id'),
                 }
-                return {'error': False, 'result': params}
+                return {'error': False, 'result': params, 'additional_info': {'signal': kwargs.get('trade_signal_name')}}
 
             if side == "SELL":
                 params = {
@@ -270,7 +271,6 @@ class BittrexTrader(Trader):
             order_history_resp = await self.get_recent_orders()
             if order_history_resp['error']:
                 logger.error(f"[!] {order_history_resp['message']}")
-            order_history = order_history_resp.get('result')
 
         except Exception as e:
             logger.exception(e)
@@ -394,49 +394,6 @@ class BittrexTrader(Trader):
                 }
             await self.update_asset_balance(balance_model_msg)
 
-            '''
-            open_orders_resp = await self.get_open_orders()
-            if open_orders_resp['error']:
-                logger.error(f"[!] {open_orders_resp['message']}")
-            open_orders = open_orders_resp.get('result')
-
-            order_history_resp = await self.get_recent_orders()
-            if order_history_resp['error']:
-                logger.error(f"[!] {order_history_resp['message']}")
-            order_history = order_history_resp.get('result')
-            if msg['currency'] == "BTC":
-                return
-            pair_open_orders = [order for order in open_orders if asset['Currency'] in order['Exchange'] and order['OrderType'] == "LIMIT_BUY"]
-            if pair_open_orders:
-                last_buy_order = max(pair_open_orders, key=lambda x: int(datetime.strptime(f"{x['TimeStamp']}Z", '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()))
-                buy_price = last_buy_order['Price']
-                symbol = last_buy_order['Exchange']
-                logger.info(f"[+] Last price for {symbol} is {buy_price}")
-                order_params = {
-                    'price': float(buy_price) * (1 + self.profit_margin),
-                    'symbol': symbol,
-                    'exchange': self._exchange,
-                    'side': 'SELL',
-                }
-                await self.orders_queue.put(order_params)
-                return
-            else: #check if pair is already in recently closed pairs
-                pair_closed_orders = [order for order in order_history if asset['Currency'] in order['Exchange'] and order['OrderType'] == "LIMIT_BUY"]
-                if pair_closed_orders:
-                    last_buy_order = max(pair_open_orders, key=lambda x: int(datetime.strptime(f"{x['TimeStamp']}Z", '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()))
-                    buy_price = last_buy_order['Price']
-                    symbol = last_buy_order['Exchange']
-                    logger.info(f"[+] Last price for {symbol} is {buy_price}")
-                    order_params = {
-                        'price': float(buy_price) * (1 + self.profit_margin),
-                        'symbol': symbol,
-                        'exchange': self._exchange,
-                        'side': 'SELL',
-                    }
-                    await self.orders_queue.put(order_params)
-                    return
-            '''
-
     @run_in_executor
     def get_asset_balances(self):
         balances_resp = self.account.get_balances()
@@ -490,22 +447,6 @@ class BittrexTrader(Trader):
         if last_price['success']:
             return {'error': False, 'result': last_price['result']['Last']}
         return {'error': True, 'message': last_price['message']}
-
-    async def print_asset_balances(self, balances):
-        logger.info(f"[+] Asset balances for {self._exchange}")
-        for bal in balances:
-            logger.info(f"{bal['Currency']}, total- {bal['Balance']}, available- {bal['Available']}, pending- {bal['Pending']}")
-
-    async def print_open_orders(self, orders=None):
-        if not orders:
-            orders_resp = await self.get_open_orders()
-            if orders_resp['error']:
-                logger.error(f"[!] {orders_resp['message']}")
-                return
-            logger.info(f"[+] Open orders for {self._exchange}")
-            orders = orders_resp['result']
-        for order in orders:
-            logger.info(f"{order['Exchange']} {order['OrderType']} Quantity {order['Quantity']} Remaining{order['QuantityRemaining']}")
 
     async def routine_check(self):
         #order get open orders every 5 minutes, else open orders should be updated via websockets trade event.

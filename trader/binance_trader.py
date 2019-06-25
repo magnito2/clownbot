@@ -72,13 +72,12 @@ class BinanceTrader(Trader):
         if not order_type:
             order_type = 'LIMIT'
 
-        #orders = self.account.open_orders(symbol)
-        #if orders:
-        #    logger.debug(f"[+] Symbol {symbol} has open orders.")
-        #    order_list = [order for order in orders if order['side'] == side]
-        #    logger.info(f"[!] Cancelling orders {[order['orderId'] for order in order_list]}")
-        #    for order in order_list:
-        #       self.account.cancel_order(symbol, order_id=order['orderId'])
+        if side == "BUY": #dont have more that two open orders
+            orders = self.sync_get_open_orders(symbol)
+            if orders:
+                logger.debug(f"[+] Symbol {symbol} has open orders.")
+                if len(orders) > 2:
+                    return {'error': True, 'message': f'There are already two open orders for the symbol, cannot create a new one'}
 
         print(f"{'+'*70}")
         print(f"New order, {symbol} {side} {order_type} {quantity} {price} {order_id}")
@@ -86,10 +85,6 @@ class BinanceTrader(Trader):
 
         symbol_info = self.get_symbol_info(symbol)
 
-        print(f"{'+'*100}")
-        print('response is')
-        print(resp)
-        print(f"{'-'*100}")
         if side == "BUY":
             params = {
                 'exchange': self._exchange,
@@ -102,9 +97,10 @@ class BinanceTrader(Trader):
                 'buy_quantity': resp['origQty'],
                 'buy_status': resp['status'],
                 'side': 'BUY',
-                'exchange_account_id': self.account_model_id
+                'exchange_account_id': self.account_model_id,
+                'trade_signal_id': kwargs.get('trade_signal_id')
             }
-            return {'error': False, 'result': params}
+            return {'error': False, 'result': params, 'additional_info': {'signal': kwargs.get('trade_signal_name')}}
 
         if side == "SELL":
             params = {
@@ -357,17 +353,18 @@ class BinanceTrader(Trader):
                 await self.update_order_model(**order_model_params)
                 await asyncio.sleep(3)
                 await self.update_trade(**trade_model_params)
-                print("*"*100)
-                print(f"Our symbol is {order_model_params['symbol']}")
-                print(f"Our price is {order_model_params['price']}")
-                print("*"*100)
-                await self.send_notification(f"{emoji.emojize(':dollar:', use_aliases=True)} {order_model_params['status']}: {order_model_params['side']}ING {order_model_params['quantity']} {order_model_params['symbol']}@ {order_model_params['price']}")
+                if trade_params['side'] == 'BUY':
+                    trade_model = await self.get_trade_model(buy_order_id=trade_model_params['buy_order_id'])
+                else:
+                    trade_model = await self.get_trade_model(sell_order_id=trade_model_params['sell_order_id'])
+
+                message = f"{emoji.emojize(':dollar:', use_aliases=True)} {order_model_params['status']}: {order_model_params['side']}ING {order_model_params['quantity']} {order_model_params['symbol']}@ {order_model_params['price']}"
 
                 if trade_params['type'] == "NEW":
                     self.active_symbols.append(order_model_params)
 
                 if trade_params['type'] == "TRADE":
-                    if trade_params['side'] == "BUY" and trade_params['status'] in ['FILLED', 'PARTIALLY_FILLED']: #we have bought something, lets put up a sell
+                    if trade_params['side'] == "BUY" and trade_params['status'] in ['FILLED']: #we have bought something, lets put up a sell
                         avg_price = float(trade_params['cummulative_quote_asset_transacted']) / float(trade_params['cummulative_filled_quantity'])
                         sell_price = avg_price * (1 + self.profit_margin)
                         logger.info(f"[+] Trade event, we've bought {trade_params['cummulative_filled_quantity']} at {avg_price}")
@@ -400,9 +397,18 @@ class BinanceTrader(Trader):
                                 o = ol[0]
                                 self.active_symbols.remove(o)
 
+                        message += f"\n Amount bought {trade_params['cummulative_filled_quantity']} at {avg_price} \n"
+                        message += f"Target sell price {sell_price}"
+
+                    if trade_params['side'] == "SELL" and trade_params['status'] == 'FILLED':
+                        if trade_model:
+                            message += f"\n Bought {trade_model.buy_quantity} @ {trade_model.buy_price}"
+                            message += f"\n Sold {trade_model.sell_quantity} @ {trade_model.sell_price}"
+                            message += f"\n Profit {float(trade_model.sell_price) * float(trade_model.sell_quantity) - float(trade_model.buy_price) * float(trade_model.buy_quantity)}\n"
+
                 if trade_params['type'] == "CANCELED":
                     if trade_params['side'] == "SELL":
-                        logger.warning("[!] You just cancelled a a SELL! You dont cancel a sell.")
+                        logger.warning("[!] You just cancelled a a SELL!")
 
                     ol = [o for o in self.active_symbols if o['client_order_id'] == trade_params['client_order_id']]
                     if ol:
@@ -649,4 +655,7 @@ class BinanceTrader(Trader):
 
     @run_in_executor
     def get_open_orders(self, symbol):
+        return self.account.open_orders(symbol)
+
+    def sync_get_open_orders(self, symbol):
         return self.account.open_orders(symbol)

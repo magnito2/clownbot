@@ -27,7 +27,7 @@ class Celebro:
         self.tg_kwargs['API_HASH'] = config.get('DEFAULT','Telegram_API_HASH')
         self.exchange_traders = []
         with create_session() as session:
-            exchange_account_models = session.query(ExchangeAccount).all()
+            exchange_account_models = session.query(ExchangeAccount).filter_by(valid_keys=True).all()
             if not exchange_account_models:
                 logger.error("No single account has been added, please add accounts")
             for account in exchange_account_models:

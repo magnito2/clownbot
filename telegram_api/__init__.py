@@ -47,6 +47,7 @@ class MyTelegramClient:
                         signaller.trade_signals.append(ts)
                         session.commit()
                         signal['trade_signal_id'] = ts.id
+                        signal['trade_signal_name'] = ts.name
                     if signal['exchange'] == "BINANCE":
                         logger.info(f"********Putting {signal} into queues")
                         for queue in self.binance_queues:

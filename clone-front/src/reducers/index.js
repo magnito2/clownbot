@@ -6,6 +6,7 @@ import {settings} from "./settings.reducer";
 import {signals} from "./signals.reducer";
 import {portfolios} from "./portfolio.reducer";
 import {manualorders} from "./manualorders.reducer";
+import {trades} from "./trades.reducer";
 
 import notifyReducer from 'react-redux-notify';
 
@@ -16,7 +17,8 @@ const rootReducer = combineReducers({
     signals,
     notifications: notifyReducer,
     portfolio: portfolios,
-    manualorders
+    manualorders,
+    trades
 });
 
 export default rootReducer;

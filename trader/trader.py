@@ -47,7 +47,7 @@ class Trader:
 
         self.last_bot_restart = datetime.utcnow()
         self.bot_restart_interval = 60*60*3
-        self.routine_check_interval = 60*5
+        self.routine_check_interval = 60*1
 
         if kwargs.get('use_fixed_amount_per_order'):
             self.btc_per_order = float(kwargs.get('fixed_amount_per_order'))
@@ -96,7 +96,11 @@ class Trader:
                         result = resp['result']
                         self.streamer.add_trades(result['symbol'], self.process_symbol_stream)
                         await self.update_trade(**result)
-                        await self.send_notification(f"{emoji.emojize(':white_check_mark:', use_aliases=True)} New order created, {result} ")
+                        await self.send_notification(f"{emoji.emojize(':white_check_mark:', use_aliases=True)} Trade Initiated\n "
+                                                     f"Symbol: {result['symbol']}\n quantity: {result['quantity']} entry price {result['price']}\n"
+                                                     f"target price: {float(result['price']) * (1+self.profit_margin)}\n"
+                                                     f"stop loss trigger price: {float(result['price']) * (1 - self.stop_loss_trigger)}\n"
+                                                     f"signal: {resp['additional_info']['signal']}")
                         continue #go to next loop
                     else:
                         logger.debug(f'[!] Order not understood, {order_params}')
