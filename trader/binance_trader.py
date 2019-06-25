@@ -535,6 +535,7 @@ class BinanceTrader(Trader):
                             logger.error(market_price_resp['message'])
                             continue
                         market_price = float(market_price_resp['result'])
+                        print(f"The buy price is {buy_price}")
                         print(f"Comparing buy {buy_price} and current {market_price} stop loss {self.stop_loss_trigger} stop loss price {buy_price * (1 - self.stop_loss_trigger)}")
                         if market_price < float(buy_price) * (1 - self.stop_loss_trigger):  # we've gone below our stop loss
 
