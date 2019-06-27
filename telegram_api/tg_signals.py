@@ -1,4 +1,4 @@
-import re
+import re, random
 
 class ProcessSignal:
 
@@ -51,8 +51,6 @@ class CQSScalpingFree(ProcessSignal):
 class MagnitoCrypto(ProcessSignal):
 
     name = 'magnitocrypto'
-    #name = "CryptoPingMikeBot"
-    #name = "QualitySignalsChannel"
     re_pattern = ""
 
     def __init__(self, SigClass):
@@ -65,7 +63,6 @@ class MagnitoCrypto(ProcessSignal):
 class QualitySignalsChannel(ProcessSignal):
 
     name = "QualitySignalsChannel"
-    #name = 'magnitocrypto'
     re_pattern = ".*\n\n.*\s(Buy|Sell)\s#([A-Z]+)/#([A-Z]+)[\s\S]*#(BINANCE|BITTREX)\n\n[\s\S]*#(\d+)" \
                  "[\s\S]*Entry:\s(\d+\.\d+)\s-\s(\d+\.\d+)[\s\S]*\n[\s\S]*Current\sask:\s(\d+\.\d+)[\s\S]*\n[\s\S]*Target\s1:\s\s(\d+\.\d+)[\s\S]*"
 
@@ -91,9 +88,25 @@ class QualitySignalsChannel(ProcessSignal):
 
 class CryptoPingMikeBot(ProcessSignal):
 
-    re_pattern = ""
-    name = "CryptoPingMikeBot"
+    re_pattern = ".*#([A-Z]+)\nUp signal on (Binance|Bittrex)\n[\s\S]*price: (\d+\.\d+) BTC\n[\s\S]*"
+    name = "CryptoPingNovemberBot"
 
     @classmethod
     def process(cls, message):
-        pass
+        signal_raw = re.search(cls.re_pattern, message)
+        if not signal_raw:
+            f = open('dump.txt', 'w', encoding='utf-8')
+            f.write(message)
+            f.close()
+            return
+        signal_tup = signal_raw.groups()
+        signal = {
+            'signal_name': cls.name,
+            'symbol': f"BTC_{signal_tup[0]}",
+            'exchange': signal_tup[1].upper(),
+            'side': "BUY",
+            'price': float(signal_tup[2]),
+            'target_price': float(signal_tup[2])*1.02,
+            'signal_id': random.randint(0,10000)
+        }
+        return signal

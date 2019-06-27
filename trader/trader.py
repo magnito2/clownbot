@@ -224,6 +224,15 @@ class Trader:
                 return []
 
     @run_in_executor
+    def delete_order_model(self, client_order_id):
+        with create_session() as session:
+            order = session.query(Order).filter_by(exchange=self._exchange).filter_by(client_order_id=client_order_id).first()
+            if order:
+                session.delete(order)
+                session.commit()
+                return True
+
+    @run_in_executor
     def get_trade_models(self):
         with create_session() as session:
             trades = session.query(Trade).filter_by(exchange=self._exchange).filter_by(exchange_account_id=self.account_model_id).all()
@@ -241,6 +250,14 @@ class Trader:
             elif sell_order_id:
                 trade = session.query(Trade).filter_by(sell_order_id=sell_order_id).first()
             return trade
+
+    @run_in_executor
+    def delete_trade_model(self, buy_order_id):
+        with create_session() as session:
+            trade = session.query(Trade).filter_by(buy_order_id=buy_order_id).first()
+            session.delete(trade)
+            session.commit()
+        return True
 
     @run_in_executor
     def get_asset_models(self, asset = None):

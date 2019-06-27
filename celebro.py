@@ -4,11 +4,11 @@ the brain.
 
 import asyncio, logging, configparser
 
-from telegram_api import MyTelegramClient, MagnitoCrypto, CQSScalpingFree, QualitySignalsChannel
+from telegram_api import MyTelegramClient, MagnitoCrypto, CQSScalpingFree, QualitySignalsChannel, CryptoPingMikeBot
 
 from signals_reciever import HttpSignalReciever
 
-from trader import BinanceTrader, BittrexTrader
+from trader import BinanceTrader, BittrexTrader, BinanceSocketManager
 
 from models import create_session, StartUp, ExchangeAccount
 
@@ -26,6 +26,9 @@ class Celebro:
         self.tg_kwargs['API_ID'] = config.get('DEFAULT','Telegram_API_ID')
         self.tg_kwargs['API_HASH'] = config.get('DEFAULT','Telegram_API_HASH')
         self.exchange_traders = []
+
+        self.binance_price_streamer = BinanceSocketManager() #pushes prices in real time to subscribed bots.
+
         with create_session() as session:
             exchange_account_models = session.query(ExchangeAccount).filter_by(valid_keys=True).all()
             if not exchange_account_models:
@@ -46,7 +49,8 @@ class Celebro:
                         'subscribed_signals': [signal.name for signal in account.signals],
                         'use_fixed_amount_per_order': account.use_fixed_amount_per_order,
                         'fixed_amount_per_order': account.fixed_amount_per_order,
-                        'exchange_account_model_id': account.id
+                        'exchange_account_model_id': account.id,
+                        'price_streamer': self.binance_price_streamer
                     }
                     valid = self.validate_account_model_params(kwargs)
                     if not valid:
@@ -103,8 +107,8 @@ class Celebro:
         binance_trader_queues = [trader.orders_queue for trader in self.exchange_traders if trader._exchange == "BINANCE"]
         bittrex_traders_queues = [trader.orders_queue for trader in self.exchange_traders if trader._exchange == "BITTREX"]
 
-        magcrypt = MagnitoCrypto(QualitySignalsChannel)
-        self.tg_client = MyTelegramClient(binance_trader_queues, bittrex_traders_queues, [magcrypt, CQSScalpingFree, QualitySignalsChannel], self.tg_kwargs)
+        magcrypt = MagnitoCrypto(CryptoPingMikeBot)
+        self.tg_client = MyTelegramClient(binance_trader_queues, bittrex_traders_queues, [magcrypt, CQSScalpingFree, QualitySignalsChannel, CryptoPingMikeBot], self.tg_kwargs)
         producers = [asyncio.create_task(self.tg_client.run())]
 
         for trader in self.exchange_traders: #pass tg_client message queue to every traderxc

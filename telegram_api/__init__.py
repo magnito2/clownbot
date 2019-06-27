@@ -4,12 +4,12 @@ The telegram api. Recieves signals from telegram and broadcasts events.
 '''
 from telethon import TelegramClient, events
 import logging, asyncio
-from .tg_signals import CQSScalpingFree, MagnitoCrypto, QualitySignalsChannel
+from .tg_signals import CQSScalpingFree, MagnitoCrypto, QualitySignalsChannel, CryptoPingMikeBot
 from models import create_session, TradeSignal, Signal
 
 logger = logging.getLogger('clone.tg')
-#logging.getLogger('clone.tg').setLevel(level=logging.DEBUG)
-logging.getLogger('telethon').setLevel(level=logging.ERROR)
+logging.getLogger('clone.tg').setLevel(level=logging.DEBUG)
+logging.getLogger('telethon').setLevel(level=logging.INFO)
 api_id = 895830
 api_hash = '318d4db283d08faa09644784e5e7a360'
 
@@ -65,8 +65,8 @@ class MyTelegramClient:
             logger.exception(e)
 
     async def run(self):
-        self.client.add_event_handler(self.my_event_handler, events.NewMessage(chats=tuple([channel.name for channel in self.signal_channels])))
         await self.client.start()
+        self.client.add_event_handler(self.my_event_handler, events.NewMessage(chats=tuple([channel.name for channel in self.signal_channels])))
 
         for channel in self.signal_channels:
             chat = await self.client.get_input_entity(channel.name)

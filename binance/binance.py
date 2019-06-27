@@ -670,7 +670,7 @@ class Streamer:
         self.__pending_reads[id].cancel()
         del self.__pending_reads[id]
 
-        _log("Stream closed: ", id)
+        _log("Stream closed: " + id)
 
     def close_all(self):
         """

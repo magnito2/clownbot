@@ -13,6 +13,7 @@ cffi==1.12.2
 chardet==3.0.4
 Click==7.0
 colorama==0.4.1
+cryptg==0.2.post0
 decorator==4.4.0
 emoji==0.5.2
 Flask==1.0.2

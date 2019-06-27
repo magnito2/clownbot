@@ -1,2 +1,3 @@
 from .bittrex_trader import BittrexTrader
 from .binance_trader import BinanceTrader
+from .binance_socker_manager import BinanceSocketManager

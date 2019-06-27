@@ -1,0 +1,1 @@
+from .test_trades import main
