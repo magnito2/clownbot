@@ -482,6 +482,7 @@ class BinanceTrader(Trader):
         trade_models = await self.get_trade_models()
         sym_open_trades = [trade for trade in trade_models if trade.symbol == params['symbol'] and trade.buy_status == "FILLED" and trade.sell_status != "FILLED"]
         for trade in sym_open_trades:
+            print(f"[+] Before crash buy_price{trade.buy_price}, stop loss trigger {self.stop_loss_trigger}, price {params['price']}")
             if params['price'] < trade.buy_price * (1 - self.stop_loss_trigger):
                 logger.info(f"[!] {params['symbol']} Stop loss condition, bought at {trade.buy_price}, current price {params['price']}")
                 resp = await self.cancel_order(trade.symbol, client_order_id = trade.sell_order_id)

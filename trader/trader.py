@@ -60,7 +60,6 @@ class Trader:
         :return:
         1. stream for account events, tell when a trade has occured
         '''
-        await self.send_admin_notification(f'{emoji.emojize(":white_check_mark:", use_aliases=True)} {self._exchange} bot has been started, you will be receiving updates now')
 
         is_valid = await self._validate_keys()
         if not is_valid:
