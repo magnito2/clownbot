@@ -6,6 +6,7 @@ from telethon import TelegramClient, events
 import logging, asyncio
 from .tg_signals import CQSScalpingFree, MagnitoCrypto, QualitySignalsChannel, CryptoPingMikeBot
 from models import create_session, TradeSignal, Signal
+from telethon.tl import types
 
 logger = logging.getLogger('clone.tg')
 logging.getLogger('clone.tg').setLevel(level=logging.DEBUG)
@@ -33,10 +34,16 @@ class MyTelegramClient:
             signal = None
 
             for channel in self.signal_channels:
-                if channel.channel_id == chat.channel_id:
-                    logger.info(f"[+] Channel {channel.name} has recived a signal {text}")
-                    signal = channel.process(text)
-                    break
+                if isinstance(chat, types.InputPeerUser):
+                    if channel.channel_id == chat.user_id:
+                        logger.info(f"[+] Channel {channel.name} has recived a signal {text}")
+                        signal = channel.process(text)
+                        break
+                elif isinstance(chat, types.InputPeerChannel):
+                    if channel.channel_id == chat.channel_id:
+                        logger.info(f"[+] Channel {channel.name} has recived a signal {text}")
+                        signal = channel.process(text)
+                        break
 
             if signal:
                 if signal['side'] == "BUY":
@@ -47,7 +54,7 @@ class MyTelegramClient:
                         signaller.trade_signals.append(ts)
                         session.commit()
                         signal['trade_signal_id'] = ts.id
-                        signal['trade_signal_name'] = ts.name
+                        signal['trade_signal_name'] = ts.signal_name
                     if signal['exchange'] == "BINANCE":
                         logger.info(f"********Putting {signal} into queues")
                         for queue in self.binance_queues:

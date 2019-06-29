@@ -28,6 +28,8 @@ class Config(object):
     SECURITY_LOGIN_USER_TEMPLATE = 'security/login_user.html'
     SECURITY_REGISTER_USER_TEMPLATE = 'security/register_user.html'
     SECURITY_REGISTERABLE = True
+    SECURITY_RECOVERABLE = True
+    SECURITY_CONFIRMABLE = True
 
     JWT_SECRET_KEY = 'C-yiJqXMN6yEDnMpCxNtag'
 

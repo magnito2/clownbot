@@ -60,7 +60,7 @@ class Trader:
         :return:
         1. stream for account events, tell when a trade has occured
         '''
-        await self.send_notification(f'{emoji.emojize(":white_check_mark:", use_aliases=True)} {self._exchange} bot has been started, you will be recieving updates now')
+        await self.send_admin_notification(f'{emoji.emojize(":white_check_mark:", use_aliases=True)} {self._exchange} bot has been started, you will be receiving updates now')
 
         is_valid = await self._validate_keys()
         if not is_valid:
@@ -95,12 +95,19 @@ class Trader:
                         logger.info(resp)
                         result = resp['result']
                         self.streamer.add_trades(result['symbol'], self.process_symbol_stream)
-                        await self.update_trade(**result)
-                        await self.send_notification(f"{emoji.emojize(':white_check_mark:', use_aliases=True)} Trade Initiated\n "
-                                                     f"Symbol: {result['symbol']}\n quantity: {result['quantity']} entry price {result['price']}\n"
-                                                     f"target price: {float(result['price']) * (1+self.profit_margin)}\n"
-                                                     f"stop loss trigger price: {float(result['price']) * (1 - self.stop_loss_trigger)}\n"
+                        trade_model = await self.update_trade(**result)
+                        print("*"*100)
+                        print(result)
+                        if result['side'] == "BUY":
+                            await self.send_notification(f"{emoji.emojize(':white_check_mark:', use_aliases=True)} {emoji.emojize(':id:', use_aliases=True)} {trade_model.id} Trade Initiated\n "
+                                                     f"Symbol: {result['symbol']}\n quantity: {result['buy_quantity']} entry price {result['buy_price']}\n"
+                                                     f"target price: {float(result['buy_price']) * (1+self.profit_margin)}\n"
+                                                     f"stop loss trigger price: {float(result['buy_price']) * (1 - self.stop_loss_trigger)}\n"
                                                      f"signal: {resp['additional_info']['signal']}")
+                        elif result['side'] == "SELL":
+                            await self.send_notification(f"{emoji.emojize(':white_check_mark:', use_aliases=True)} {emoji.emojize(':id:', use_aliases=True)} {trade_model.id} Buy Complete, Now Selling \n"
+                                                         f"symbol: {trade_model.symbol}\n Buy price {trade_model.buy_price}\n Sell price {trade_model.sell_price}\n"
+                                                         f"Quantity {trade_model.quantity}")
                         continue #go to next loop
                     else:
                         logger.debug(f'[!] Order not understood, {order_params}')
@@ -389,6 +396,10 @@ class Trader:
     async def send_notification(self, notification):
         if self.outgoing_message_queue and self.user_tg_id and self.receive_notifications:  # inform user about the new order
             await self.outgoing_message_queue.put({'id': self.user_tg_id, 'message': notification, 'sender': self._exchange})
+
+    async def send_admin_notification(self, notification):
+        if self.outgoing_message_queue:  # inform admin about the new order
+            await self.outgoing_message_queue.put({'id': 'me', 'message': notification, 'sender': self._exchange})
 
     async def update_portfolio(self):
         """

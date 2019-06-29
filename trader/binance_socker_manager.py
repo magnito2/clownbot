@@ -19,6 +19,7 @@ class BinanceSocketManager:
         '''
         self.__subscription = {}
         self.streamer = Streamer()
+        self.last_kline_price = 0
 
     def subscribe(self, symbol, bot): #we will stick to 1m candles for now
         if not symbol in self.__subscription:
@@ -46,13 +47,15 @@ class BinanceSocketManager:
 
     async def process_symbol_stream(self, msg):
         kline = msg['k']
-        params = {
-            'symbol': msg['s'],
-            'price': float(kline['c'])
-        }
-        print(f"[+] {params['symbol']} - active")
-        for bot in self.__subscription[params['symbol']]:
-            try:
-                asyncio.create_task(bot.process_symbol_stream(params))
-            except Exception as e:
-                logger.error(e)
+        if self.last_kline_price != float(kline['o']):
+            params = {
+                'symbol': msg['s'],
+                'price': float(kline['o']) #use open price of period
+            }
+            self.last_kline_price = float(kline['o'])
+            print(f"[+] {params['symbol']} - active")
+            for bot in self.__subscription[params['symbol']]:
+                try:
+                    asyncio.create_task(bot.process_symbol_stream(params))
+                except Exception as e:
+                    logger.error(e)

@@ -102,7 +102,7 @@ def _geturl_json(url, query_params=None, sign=False, method="GET", api_key=None,
         url += "?" + urllib.parse.urlencode(query_params)
 
     _log(method + ": " + url)
-
+    #print(method + ": " + url)
     req = urllib.request.Request(url, method=method)
 
     if api_key:

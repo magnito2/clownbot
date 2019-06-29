@@ -17,14 +17,15 @@ class App extends Component {
   render() {
     return (
         <Router history={history}>
-          <div class="outer-wrapper">
-            <PrivateRoute path="/" exact component={IndexPage} />
-            <PrivateRoute path="/settings" component={SettingsPage} />
-              <PrivateRoute path="/signals" component={SignalsPage} />
-              <PrivateRoute path="/manualorders" component={ManualOrderForm} />
-            <Route path="/login" component={LoginPage} />
-            <Route path="/register" component={RegisterPage} />
-          </div>
+            <div class="outer-wrapper">
+                <PrivateRoute path="/" exact component={IndexPage} />
+                <PrivateRoute path="/settings" component={SettingsPage} />
+                <PrivateRoute path="/signals" component={SignalsPage} />
+                <PrivateRoute path="/manualorders" component={ManualOrderForm} />
+                <Route path="/login" component={LoginPage} />
+                <Route path="/register" component={RegisterPage} />
+
+            </div>
         </Router>
     );
   }
