@@ -9,7 +9,7 @@ import {PrivateRoute} from "./components/PrivateRoute";
 
 import {IndexPage} from "./components/home/index";
 import {SettingsPage, SignalsPage} from "./components/settings";
-import {LoginPage} from "./components/auth";
+import {LoginPage, RecoverEmailPage, RecoverPage} from "./components/auth";
 import {RegisterPage} from "./components/auth";
 import {ManualOrderForm} from "./components/manualorders";
 
@@ -24,7 +24,8 @@ class App extends Component {
                 <PrivateRoute path="/manualorders" component={ManualOrderForm} />
                 <Route path="/login" component={LoginPage} />
                 <Route path="/register" component={RegisterPage} />
-
+                <Route path="/reset-password-email" component={RecoverEmailPage} />
+                <Route path="/reset-password/:reset_token" component={RecoverPage} />
             </div>
         </Router>
     );

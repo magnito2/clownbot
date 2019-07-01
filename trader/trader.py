@@ -41,13 +41,13 @@ class Trader:
         self.subscribed_signals = kwargs.get('subscribed_signals')
         self.account_model_id = kwargs.get('exchange_account_model_id')
         self.last_portfolio_update_time = datetime.utcnow()
-        self.portfolio_update_interval = kwargs.get('portfolio_update_interval', 300)
+        self.portfolio_update_interval = kwargs.get('portfolio_update_interval', 60*30)
         self.keep_running = True
         self.api_key = kwargs.get('api_key')
 
         self.last_bot_restart = datetime.utcnow()
         self.bot_restart_interval = 60*60*3
-        self.routine_check_interval = 60*1
+        self.routine_check_interval = 60*30
 
         if kwargs.get('use_fixed_amount_per_order'):
             self.btc_per_order = float(kwargs.get('fixed_amount_per_order'))
@@ -94,19 +94,23 @@ class Trader:
                         logger.info(resp)
                         result = resp['result']
                         self.streamer.add_trades(result['symbol'], self.process_symbol_stream)
-                        trade_model = await self.update_trade(**result)
+                        await self.update_trade(**result)
+                        asyncio.sleep(3)
+                        trade_model = await self.get_trade_model(buy_order_id=result['buy_order_id'])
+                        if not trade_model:
+                            logger.error(f"[+] Could not find trade model of id {result['buy_order_id']}")
                         print("*"*100)
                         print(result)
                         if result['side'] == "BUY":
                             await self.send_notification(f"{emoji.emojize(':white_check_mark:', use_aliases=True)} {emoji.emojize(':id:', use_aliases=True)} {trade_model.id} Trade Initiated\n "
-                                                     f"Symbol: {result['symbol']}\n quantity: {result['buy_quantity']} entry price {result['buy_price']}\n"
-                                                     f"target price: {float(result['buy_price']) * (1+self.profit_margin)}\n"
-                                                     f"stop loss trigger price: {float(result['buy_price']) * (1 - self.stop_loss_trigger)}\n"
+                                                     f"Symbol: {result['symbol']}\n quantity: {result['buy_quantity'].:8f} entry price {result['buy_price']:.8f}\n"
+                                                     f"target price: {float(result['buy_price']) * (1+self.profit_margin):.8f}\n"
+                                                     f"stop loss trigger price: {float(result['buy_price']) * (1 - self.stop_loss_trigger):.8f}\n"
                                                      f"signal: {resp['additional_info']['signal']}")
                         elif result['side'] == "SELL":
                             await self.send_notification(f"{emoji.emojize(':white_check_mark:', use_aliases=True)} {emoji.emojize(':id:', use_aliases=True)} {trade_model.id} Buy Complete, Now Selling \n"
-                                                         f"symbol: {trade_model.symbol}\n Buy price {trade_model.buy_price}\n Sell price {trade_model.sell_price}\n"
-                                                         f"Quantity {trade_model.quantity}")
+                                                         f"symbol: {trade_model.symbol:.8f}\n Buy price {trade_model.buy_price:.8f}\n Sell price {trade_model.sell_price:.8f}\n"
+                                                         f"Quantity {trade_model.quantity:.8f}")
                         continue #go to next loop
                     else:
                         logger.debug(f'[!] Order not understood, {order_params}')
@@ -196,12 +200,15 @@ class Trader:
 
     def _update_order_model(self, **kwargs):
         client_order_id = kwargs.get('client_order_id')
+        order_id = kwargs.get('order_id')
         if not client_order_id:
             return False
         with create_session() as session:
             account_model = session.query(ExchangeAccount).filter_by(id=self.account_model_id).first()
 
             order = session.query(Order).filter_by(exchange=self._exchange).filter_by(client_order_id=client_order_id).first()
+            if not order:
+                order = session.query(Order).filter_by(exchange=self._exchange).filter_by(order_id=order_id).first()
             if order:
                 session.query(Order).filter_by(exchange=self._exchange).filter_by(client_order_id=client_order_id).update(kwargs)
             else:
@@ -211,9 +218,14 @@ class Trader:
 
 
     @run_in_executor
-    def get_order_model(self, client_order_id):
+    def get_order_model(self, client_order_id=None, order_id=None):
         with create_session() as session:
-            order = session.query(Order).filter_by(exchange=self._exchange).filter_by(client_order_id=client_order_id).first()
+            if client_order_id:
+                order = session.query(Order).filter_by(exchange=self._exchange).filter_by(client_order_id=client_order_id).first()
+            elif order_id:
+                order = session.query(Order).filter_by(exchange=self._exchange).filter_by(order_id=order_id).first()
+            else:
+                return None
             if order:
                 return order
 

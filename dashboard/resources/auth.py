@@ -1,17 +1,20 @@
 from flask_restful import Resource, reqparse
 from flask_security.utils import hash_password, verify_password
+from flask_security.recoverable import reset_password_token_status
 from flask_jwt_extended import (create_access_token, create_refresh_token, jwt_required, jwt_refresh_token_required, get_jwt_identity, get_raw_jwt)
 
 from .. import user_datastore, jwt
 from ..models import RevokedTokenModel
+from ..myutils import send_reset_password_instructions, update_password
 
 from datetime import datetime, timedelta
 
 parser = reqparse.RequestParser()
-parser.add_argument('email', help = 'This field cannot be blank', required = True)
+parser.add_argument('email', help = 'This field cannot be blank')
 parser.add_argument('password')
 parser.add_argument('username')
 parser.add_argument('tg_address')
+parser.add_argument('token')
 
 
 class UserRegistration(Resource):
@@ -174,14 +177,42 @@ class TokenRefresh(Resource):
         access_token = create_access_token(identity=current_user)
         return {'access_token': access_token, "expires_at" : (datetime.utcnow() + timedelta(minutes=15)).isoformat()}
 
-class SecretResource(Resource):
+class SendPasswordResetEmail(Resource):
 
-    @jwt_required
-    def get(self):
-        return {
-            'answer': 42,
-            "user": get_jwt_identity()
-        }
+    def post(self):
+        data = parser.parse_args()
+        if not data['email']:
+            return {'message': 'Provide Email',
+                    "loggedIn": False}, 401
+        current_user = user_datastore.get_user(data['email'])
+        if not current_user:
+            return {'message': 'Email was not found',
+             "loggedIn": False}, 401
+        send_reset_password_instructions(current_user)
+        return {'message': 'An email has been sent with instructions to reset password'}
+
+class ResetPassword(Resource):
+
+    def post(self):
+        data = parser.parse_args()
+        print("We are here")
+        if not data['password'] or not data['token']:
+            return {'message': 'Provide Password and the token sent',
+                    "loggedIn": False}, 401
+        expired, invalid, user = reset_password_token_status(data['token'])
+        if expired:
+            return {'message': 'The password reset token provided has expired',
+                    "loggedIn": False}, 401
+        if invalid:
+            return {'message': 'Invalid token provided',
+                    "loggedIn": False}, 401
+        if not user:
+            return {'message': 'Could not find a user for that account',
+                    "loggedIn": False}, 401
+        print("Updating password for", user.username)
+        update_password(user, data['password'])
+        return {'message': 'The password for your account has been successfully updated'}
+
 
 @jwt.token_in_blacklist_loader
 def check_if_token_in_blacklist(decrypted_token):

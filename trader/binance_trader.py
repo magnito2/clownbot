@@ -359,25 +359,31 @@ class BinanceTrader(Trader):
                         'side': 'SELL'
                     }
 
-                await self.update_order_model(**order_model_params) #we can still add even orders we did not create for tracking
-
-                message = f"{emoji.emojize(':dollar:', use_aliases=True)} {order_model_params['status']}: {order_model_params['side']}ING {order_model_params['quantity']} {order_model_params['symbol']}@ {order_model_params['price']}"
+                message = f"{emoji.emojize(':dollar:', use_aliases=True)} {order_model_params['status']}: {order_model_params['side']}ING {order_model_params['quantity']:.8f} {order_model_params['symbol']}@ {order_model_params['price']:.8f}"
 
                 if trade_params['side'] == 'BUY': #lets us check if we created this trade, if not, bail out.
-                    if trade_params['status'] == "NEW":
+                    if trade_params['status'] == "NEW" and "BUY_" in trade_params['client_order_id']:
+                        if not order_model_params['status'] == "REJECTED":
+                            await self.update_order_model(**order_model_params)
+
                         await self.update_trade(**trade_model_params)
                         await asyncio.sleep(3)
                     trade_model = await self.get_trade_model(buy_order_id=trade_model_params['buy_order_id'])
-                    logger.info(f"[+] Accessing trade model buy id {trade_model_params['buy_order_id']}")
+
                 else:
                     trade_model = await self.get_trade_model(sell_order_id=trade_model_params['sell_order_id'])
-                    logger.info(f"[+] Accessing trade model sell id {trade_model_params['sell_order_id']}")
+
 
                 if not trade_model:
-                    message += f"\n{emoji.emojize(':exclamation:', use_aliases=True)} The trade was not initialized by the bot, therefore, it will be ignored."
-                    await self.send_notification(message)
+                    logger.info(f"[!] This trade {message} is not from me, id {trade_params['orderId']}, client order id {trade_params['client_order_id']}")
                     return
+
+                if trade_params['side'] == 'BUY' and trade_params['status'] == 'REJECTED':
+                    await self.delete_trade_model(trade_params['client_order_id'])
+                    await self.delete_order_model(trade_params['client_order_id'])
+
                 if not trade_params['side'] == 'BUY' and trade_params['status'] == 'NEW':
+                    await self.update_order_model(**order_model_params)
                     await self.update_trade(**trade_model_params)
                     await asyncio.sleep(3)
 
@@ -423,14 +429,14 @@ class BinanceTrader(Trader):
                                 o = ol[0]
                                 self.active_symbols.remove(o)
 
-                        message += f"\n Amount bought {trade_params['cummulative_filled_quantity']} at {avg_price} \n"
-                        message += f"Target sell price {sell_price}"
+                        message += f"\n Amount bought {trade_params['cummulative_filled_quantity']:.8f} at {avg_price} \n"
+                        message += f"Target sell price {sell_price:.8f}"
 
                     if trade_params['side'] == "SELL" and trade_params['status'] == 'FILLED':
                         if trade_model:
-                            message += f"\n Bought {trade_model.buy_quantity} @ {trade_model.buy_price}"
-                            message += f"\n Sold {trade_model.sell_quantity} @ {trade_model.sell_price}"
-                            message += f"\n Profit {float(trade_model.sell_price) * float(trade_model.sell_quantity) - float(trade_model.buy_price) * float(trade_model.buy_quantity)}\n"
+                            message += f"\n Bought {trade_model.buy_quantity:.8f} @ {trade_model.buy_price:.8f}"
+                            message += f"\n Sold {trade_model.sell_quantity:.8f} @ {trade_model.sell_price:.8f}"
+                            message += f"\n Profit {float(trade_model.sell_price) * float(trade_model.sell_quantity) - float(trade_model.buy_price) * float(trade_model.buy_quantity):.8f}\n"
 
                             self.price_streamer.unsubscribe(trade_model.symbol, self)
 
@@ -448,10 +454,6 @@ class BinanceTrader(Trader):
                         trade = self.get_trade_model(buy_order_id=trade_params['client_order_id'])
                         if trade:
                             await self.delete_trade_model(trade.buy_order_id)
-                    ol = [o for o in self.active_symbols if o['client_order_id'] == trade_params['client_order_id']]
-                    if ol:
-                        o = ol[0]
-                        self.active_symbols.remove(o)
 
                 await self.send_notification(message)
 
@@ -481,13 +483,39 @@ class BinanceTrader(Trader):
 
         trade_models = await self.get_trade_models()
         sym_open_trades = [trade for trade in trade_models if trade.symbol == params['symbol'] and trade.buy_status == "FILLED" and trade.sell_status != "FILLED"]
+        if not sym_open_trades:
+            self.price_streamer.unsubscribe(params['symbol'], self)
         for trade in sym_open_trades:
-            print(f"[+] Before crash buy_price{trade.buy_price}, stop loss trigger {self.stop_loss_trigger}, price {params['price']}")
+
+            if trade.buy_price == 0:
+                # check if buy price is greater than zero, not necessary but external bots sometimes sell at market price.
+                if not "BUY_" in trade.buy_order_id:
+                    logger.info("[!] Externally initiated order, deleting")
+                    await self.delete_trade_model(trade.buy_order_id)
+                    return
+                else:
+                    logger.error(f"[!!] order {trade.buy_order_id}Price is missing, check bot...")
+
+            order_model = await self.get_order_model(trade.sell_order_id)
+            if not order_model:
+                logger.error(f"[!] Could not find order with client order id {trade.sell_order_id}")
+                self.price_streamer.unsubscribe(params['symbol'], self)
+                return
+            if order_model.order_id == -1:
+                logger.error(f"order {order_model.order_id} was rejected")
+                await self.delete_order_model(client_order_id=trade.sell_order_id)
+
             if params['price'] < trade.buy_price * (1 - self.stop_loss_trigger):
-                logger.info(f"[!] {params['symbol']} Stop loss condition, bought at {trade.buy_price}, current price {params['price']}")
-                resp = await self.cancel_order(trade.symbol, client_order_id = trade.sell_order_id)
+
+                if  params['price'] * trade.buy_quantity < 0.00101:
+                    logger.info(f"[!] {params['symbol']} Order notional of {trade.buy_quantity * params['price']} below min notional, current price {params['price']}")
+                    return
+
+                resp = await self.cancel_order(trade.symbol, order_id=order_model.order_id)
                 if resp['error']:
                     logger.error(resp['message'])
+                    if 'Unknown order sent' in resp['message']:
+                        await self.delete_order_model(order_model.client_order_id)
                     return
                 order_id = f"SELL-LOSS_{trade.buy_order_id.split('_')[1]}"
                 sell_price = params['price'] * 0.995
@@ -497,7 +525,8 @@ class BinanceTrader(Trader):
                     'side': 'SELL',
                     'price': sell_price,
                     'order_id': order_id,
-                    'buy_order_id': trade.buy_order_id
+                    'buy_order_id': trade.buy_order_id,
+                    'quantity': trade.buy_quantity
                 })
 
     @run_in_executor
@@ -551,15 +580,20 @@ class BinanceTrader(Trader):
             order_models = await self.get_order_models()
             open_order_models = [order_model for order_model in order_models if order_model.status == "NEW"]
             closed_order_models = [order_model for order_model in order_models if order_model.status in ['FILLED', 'PARTIALLY_FILLED']]
-            logger.info("[+] We have the following open orders")
-            logger.info(open_order_models)
+
             for order in open_order_models:
                 if order.side == 'BUY' and datetime.utcnow() - order.order_time > self.parse_time(self.order_timeout):
                     open_orders = await self.get_open_orders(order.symbol)
                     cur_order = [o for o in open_orders if o['orderId'] == order.order_id]
                     if cur_order:
                         logger.info(f"[+] Cancelling order {order.symbol} {order.order_id}")
-                        await self.cancel_order(order.symbol, order.order_id)
+                        resp = await self.cancel_order(order.symbol, order_id=order.order_id)
+                        if resp['error']:
+                            logger.error(resp['message'])
+                            if 'Unknown order sent' in resp['message']:
+                                await self.delete_order_model(order.client_order_id)
+
+                        await self.delete_trade_model(buy_order_id=order.client_order_id)
                     else:
                         logger.info(f"[!] Order {order.client_order_id} has expired, cancelling")
                         await self.delete_trade_model(order.client_order_id)
@@ -578,19 +612,25 @@ class BinanceTrader(Trader):
                             logger.error(market_price_resp['message'])
                             continue
                         market_price = float(market_price_resp['result'])
-                        print(f"Comparing buy {buy_price} and current {market_price} stop loss {self.stop_loss_trigger} stop loss price {buy_price * (1 - self.stop_loss_trigger)}")
-                        if market_price < float(buy_price) * (1 - self.stop_loss_trigger):  # we've gone below our stop loss
 
+                        if market_price < float(buy_price) * (1 - self.stop_loss_trigger):  # we've gone below our stop loss
                             if order.price < market_price * 1.005 or 'SELL-LOSS' in order.client_order_id:
                                 continue #no need to stop stop-losses
 
-                            logger.warning(
-                                f"[!] Market price for {order.symbol} has gone below stop loss trigger, placing stop loss sell")
+                            logger.warning(f"[!] Market price for {order.symbol} has gone below stop loss trigger, placing stop loss sell")
+
+                            if order.quantity * market_price < 0.00101:
+                                logger.info("[!] The notional size of the order is below minimum")
+                                continue
 
                             sell_price = market_price * 0.995
-                            print("*"*70)
-                            print(f"Attempting to cancel order {order.symbol} {order.order_id}")
-                            await self.cancel_order(order.symbol, order.order_id)
+
+                            resp = await self.cancel_order(order.symbol, order_id=order.order_id)
+                            if resp['error']:
+                                logger.error(resp['message'])
+                                if 'Unknown order sent' in resp['message']:
+                                    await self.delete_order_model(order.client_order_id)
+
                             order_id = f"SELL-LOSS_{order.client_order_id.split('_')[1]}"
 
                             await self.orders_queue.put({
@@ -627,19 +667,15 @@ class BinanceTrader(Trader):
                                     logger.exception(e)
                                     continue
                         sell_price = buy_price * (1 + self.profit_margin)
-                        sell_size_resp = await self.a_quantity_and_price_roundoff(symbol=trade_model.symbol,
-                                                                                  price=sell_price, side='SELL', quantity=trade_model.buy_quantity)
-                        if sell_size_resp['error']:
-                            logger.error(f"[!] {sell_size_resp['message']}")
-                            continue
+
                         order_id = f"SELL_{trade_model.buy_order_id.split('_')[1][:23]}"
 
                         await self.orders_queue.put({
                             'symbol': trade_model.symbol,
                             'exchange': 'BINANCE',
                             'side': 'SELL',
-                            'price': sell_size_resp['price'],
-                            'quantity': float(sell_size_resp['size']),
+                            'price': sell_price,
+                            'quantity': trade_model.buy_quantity,
                             'order_id': order_id,
                             'buy_order_id': trade_model.buy_order_id
                         })

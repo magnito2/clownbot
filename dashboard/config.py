@@ -31,6 +31,10 @@ class Config(object):
     SECURITY_RECOVERABLE = True
     SECURITY_CONFIRMABLE = True
 
+    SECURITY_RESET_URL = "/reset-password"
+
     JWT_SECRET_KEY = 'C-yiJqXMN6yEDnMpCxNtag'
 
     BOT_ADDRESS = "http://localhost:8080/signal"
+
+    FRONTEND_URL = "http://localhost:3000"

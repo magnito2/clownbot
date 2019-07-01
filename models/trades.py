@@ -28,6 +28,8 @@ class Trade(Base):
     sell_time = Column(DateTime)
     trade_signal_id = Column(Integer, ForeignKey('trade_signals.id'), nullable=True)
     timestamp = Column(DateTime, index=True, default=datetime.utcnow)
+    health = Column(String(64))
+    reason = Column(String(255))
 
     def serialize(self):
         return {

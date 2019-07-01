@@ -26,6 +26,8 @@ class Trade(db.Model):
     sell_time = db.Column(db.DateTime)
     trade_signal_id = db.Column(db.Integer, db.ForeignKey('trade_signals.id'), nullable=True)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    health = db.Column(db.String(64))
+    reason = db.Column(db.String(255))
 
     def serialize(self):
 

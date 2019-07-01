@@ -102,6 +102,9 @@ export class Register extends Component {
                                         <input type="checkbox" name="aggree"/>Agree the terms and policy
                                     </label>
                                 </div>
+                                <label>
+                                    <a href="/reset-password-email">Forgotten Password?</a>
+                                </label>
                                 <button class="au-btn au-btn--block au-btn--green m-b-20" type="submit"><Spinner loading={logginIn}/> register</button>
                             </form>
                             <div class="register-link">

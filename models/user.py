@@ -12,3 +12,4 @@ class User(Base):
     email = Column(String(255), unique=True)
     username = Column(String(255))
     tg_address = Column(String(255))
+    exchange_accounts = relationship('ExchangeAccount', backref='user', lazy=True)

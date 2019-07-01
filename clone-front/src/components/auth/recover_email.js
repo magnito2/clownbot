@@ -5,17 +5,13 @@ import { Link } from 'react-router-dom';
 import {AuthWrapper} from "./wrapper";
 import {Spinner} from "../sub-components/spinner";
 
-export class Login extends Component {
+export class RecoverEmail extends Component {
 
     constructor(props){
         super(props);
 
-        // reset login status
-        this.props.dispatch(userActions.logout());
-
         this.state = {
             email: '',
-            password: '',
             submitted: false
         };
 
@@ -32,17 +28,17 @@ export class Login extends Component {
         e.preventDefault();
 
         this.setState({ submitted: true });
-        const { email, password } = this.state;
+        const { email } = this.state;
         const { dispatch } = this.props;
-        if (email && password) {
-            dispatch(userActions.login(email, password));
+        if (email) {
+            dispatch(userActions.password_reset_request(email));
         }
     }
 
     render(){
 
         const { loggingIn } = this.props;
-        const { email, password, submitted } = this.state;
+        const { email, submitted } = this.state;
 
         return (
             <AuthWrapper>
@@ -50,7 +46,7 @@ export class Login extends Component {
                     <div class="login-content">
                         <div class="login-logo">
                             <a href="#">
-                                <img src="images/icon/clown.png" alt="CoolAdmin"/>
+                                <img src="images/icon/clown.png" alt="Clown Bot"/>
                             </a>
                         </div>
                         <div class="login-form">
@@ -62,27 +58,15 @@ export class Login extends Component {
                                     <div className="help-block">Email is required</div>
                                     }
                                 </div>
-                                <div class="form-group">
-                                    <label>Password</label>
-                                    <input type="password" className="au-input au-input--full" name="password" value={password} onChange={this.handleChange} />
-                                    {submitted && !password &&
-                                    <div className="help-block">Password is required</div>
-                                    }
-                                </div>
-                                <div class="login-checkbox">
-                                    <label>
-                                        <input type="checkbox" name="remember"/>Remember Me
-                                    </label>
-                                    <label>
-                                        <a href="/reset-password-email">Forgotten Password?</a>
-                                    </label>
-                                </div>
-                                <button class="au-btn au-btn--block au-btn--green m-b-20" type="submit"><Spinner loading={loggingIn}/> sign in</button>
+                                <button class="au-btn au-btn--block au-btn--green m-b-20" type="submit"><Spinner loading={loggingIn}/> Send Password Reset</button>
                             </form>
                             <div class="register-link">
                                 <p>
                                     Don't you have account?
                                     <Link to="/register">Sign Up Here</Link>
+                                </p>
+                                <p>
+                                    <Link to="/login">Back to Login page</Link>
                                 </p>
                             </div>
                         </div>
@@ -100,5 +84,5 @@ function mapStateToProps(state) {
     };
 }
 
-const connectedLoginPage = connect(mapStateToProps)(Login);
-export { connectedLoginPage as LoginPage };
+const connectedRecoverEmailPage = connect(mapStateToProps)(RecoverEmail);
+export { connectedRecoverEmailPage as RecoverEmailPage };

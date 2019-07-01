@@ -4,7 +4,7 @@ import asyncio
 import logging
 
 logger = logging.getLogger('clone.binance_ws')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 class BinanceSocketManager:
     '''
@@ -24,18 +24,18 @@ class BinanceSocketManager:
     def subscribe(self, symbol, bot): #we will stick to 1m candles for now
         if not symbol in self.__subscription:
             self.__subscription[symbol] = []
-            logger.info(f"Starting the socket for {symbol}")
+            logger.debug(f"Starting the socket for {symbol}")
             self.streamer.add_candlesticks(symbol, "1m", self.process_symbol_stream)
         if bot in self.__subscription[symbol]:
-            logger.info(f"[+] Bot {bot} is already subscribed")
+            logger.debug(f"[+] Bot {bot} is already subscribed")
         else:
             self.__subscription[symbol].append(bot)
-            logger.info(f"[+] Adding {bot} to {symbol}")
+            logger.debug(f"[+] Adding {bot} to {symbol}")
 
     def unsubscribe(self, symbol, bot):
         if symbol in self.__subscription:
             if bot in self.__subscription[symbol]:
-                logger.info(f"[+] Removing {bot} from {symbol}")
+                logger.debug(f"[+] Removing {bot} from {symbol}")
                 self.__subscription[symbol].remove(bot)
                 if len(self.__subscription[symbol]) == 0:
                     del self.__subscription[symbol]
@@ -53,7 +53,6 @@ class BinanceSocketManager:
                 'price': float(kline['o']) #use open price of period
             }
             self.last_kline_price = float(kline['o'])
-            print(f"[+] {params['symbol']} - active")
             for bot in self.__subscription[params['symbol']]:
                 try:
                     asyncio.create_task(bot.process_symbol_stream(params))

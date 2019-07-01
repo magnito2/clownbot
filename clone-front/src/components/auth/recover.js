@@ -1,21 +1,19 @@
 import React, {Component} from 'react';
 import { connect } from "react-redux";
-import {userActions} from "../../actions";
+import {userActions, alertActions} from "../../actions";
 import { Link } from 'react-router-dom';
 import {AuthWrapper} from "./wrapper";
 import {Spinner} from "../sub-components/spinner";
 
-export class Login extends Component {
+export class Recover extends Component {
 
     constructor(props){
         super(props);
 
-        // reset login status
-        this.props.dispatch(userActions.logout());
-
         this.state = {
-            email: '',
             password: '',
+            password_confirm: '',
+            token: '',
             submitted: false
         };
 
@@ -30,38 +28,38 @@ export class Login extends Component {
 
     handleSubmit(e) {
         e.preventDefault();
-
         this.setState({ submitted: true });
-        const { email, password } = this.state;
+        const { password, token, password_confirm } = this.state;
         const { dispatch } = this.props;
-        if (email && password) {
-            dispatch(userActions.login(email, password));
+        if (password && token && password === password_confirm) {
+            dispatch(userActions.reset_password(password, token));
         }
+        if (password_confirm !== password){
+            dispatch(alertActions.error("The password should match the password confirmation"));
+        }
+    }
+
+    componentDidMount(){
+        this.setState({
+            token: this.props.match.params.reset_token
+        });
     }
 
     render(){
 
         const { loggingIn } = this.props;
-        const { email, password, submitted } = this.state;
-
+        const { password, password_confirm, submitted } = this.state;
         return (
             <AuthWrapper>
                 <div class="login-wrap">
                     <div class="login-content">
                         <div class="login-logo">
                             <a href="#">
-                                <img src="images/icon/clown.png" alt="CoolAdmin"/>
+                                <img src="images/icon/clown.png" alt="Clown Bot"/>
                             </a>
                         </div>
                         <div class="login-form">
                             <form onSubmit={this.handleSubmit}>
-                                <div class="form-group">
-                                    <label>Email Address</label>
-                                    <input type="email" className="au-input au-input--full" name="email" value={email} onChange={this.handleChange} />
-                                    {submitted && !email &&
-                                    <div className="help-block">Email is required</div>
-                                    }
-                                </div>
                                 <div class="form-group">
                                     <label>Password</label>
                                     <input type="password" className="au-input au-input--full" name="password" value={password} onChange={this.handleChange} />
@@ -69,20 +67,22 @@ export class Login extends Component {
                                     <div className="help-block">Password is required</div>
                                     }
                                 </div>
-                                <div class="login-checkbox">
-                                    <label>
-                                        <input type="checkbox" name="remember"/>Remember Me
-                                    </label>
-                                    <label>
-                                        <a href="/reset-password-email">Forgotten Password?</a>
-                                    </label>
+                                <div class="form-group">
+                                    <label>Confirm Password</label>
+                                    <input type="password" className="au-input au-input--full" name="password_confirm" value={password_confirm} onChange={this.handleChange} />
+                                    {submitted && !password_confirm && password !== password_confirm &&
+                                    <div className="help-block">Password Confirmation Should be same as password</div>
+                                    }
                                 </div>
-                                <button class="au-btn au-btn--block au-btn--green m-b-20" type="submit"><Spinner loading={loggingIn}/> sign in</button>
+                                <button class="au-btn au-btn--block au-btn--green m-b-20" type="submit"><Spinner loading={loggingIn}/> Reset Password</button>
                             </form>
                             <div class="register-link">
                                 <p>
                                     Don't you have account?
                                     <Link to="/register">Sign Up Here</Link>
+                                </p>
+                                <p>
+                                    <Link to="/login">Back to Login page</Link>
                                 </p>
                             </div>
                         </div>
@@ -100,5 +100,5 @@ function mapStateToProps(state) {
     };
 }
 
-const connectedLoginPage = connect(mapStateToProps)(Login);
-export { connectedLoginPage as LoginPage };
+const connectedRecoverPage = connect(mapStateToProps)(Recover);
+export { connectedRecoverPage as RecoverPage };

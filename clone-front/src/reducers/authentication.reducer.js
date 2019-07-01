@@ -44,6 +44,16 @@ export function authentication(state = initialState, action) {
                 tokens: action.user.tokens,
             };
 
+        case userConstants.SEND_PASSWORD_RESET_EMAIL_REQUEST:
+            return{
+                loggingIn: true,
+            };
+        case userConstants.SEND_PASSWORD_RESET_EMAIL_SUCCESS:
+        case userConstants.SEND_PASSWORD_RESET_EMAIL_FAILURE:
+            return{
+                loggingIn: false
+            }
+
         default:
             return state
     }

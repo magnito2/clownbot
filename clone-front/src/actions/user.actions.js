@@ -9,7 +9,9 @@ export const userActions = {
     register,
     getAll,
     delete: _delete,
-    oauthlogin
+    oauthlogin,
+    password_reset_request,
+    reset_password
 };
 
 function login(username, password) {
@@ -127,4 +129,50 @@ function _delete(id) {
     function request(id) { return { type: userConstants.DELETE_REQUEST, id } }
     function success(id) { return { type: userConstants.DELETE_SUCCESS, id } }
     function failure(id, error) { return { type: userConstants.DELETE_FAILURE, id, error } }
+}
+
+function password_reset_request(email) {
+    return dispatch => {
+        dispatch(request(email));
+
+        userService.password_reset_request(email)
+            .then( () => {
+                    dispatch(success());
+                    dispatch(alertActions.success('Check your email on instructions to reset your password'));
+                    setTimeout(function(){ history.push("/") }, 3000);
+                },
+                error => {
+                    console.log("Send Email Failed,", error.toString());
+                    dispatch(failure(error.toString()));
+                    dispatch(alertActions.error(error.toString()));
+                }
+            );
+    };
+
+    function request(email) { return { type: userConstants.SEND_PASSWORD_RESET_EMAIL_REQUEST, email } }
+    function success() { return { type: userConstants.SEND_PASSWORD_RESET_EMAIL_SUCCESS } }
+    function failure(error) { return { type: userConstants.SEND_PASSWORD_RESET_EMAIL_FAILURE, error } }
+}
+
+function reset_password(password, token) {
+    return dispatch => {
+        dispatch(request());
+        console.log('pass: ',password, 'token: ', token);
+        userService.reset_password(password, token)
+            .then( () => {
+                    dispatch(success());
+                    dispatch(alertActions.success('Password has been reset successfully'));
+                    setTimeout(function(){ history.push("/") }, 3000);
+                },
+                error => {
+                    console.log("Password Reset Failed,", error);
+                    dispatch(failure(error.toString()));
+                    dispatch(alertActions.error(error.toString()));
+                }
+            );
+    };
+
+    function request() { return { type: userConstants.RESET_PASSWORD_REQUEST } }
+    function success() { return { type: userConstants.RESET_PASSWORD_SUCCESS } }
+    function failure(error) { return { type: userConstants.RESET_PASSWORD_FAILURE, error } }
 }

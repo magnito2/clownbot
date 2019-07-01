@@ -7,6 +7,8 @@ export const userService = {
     register,
     update,
     delete: _delete,
+    password_reset_request,
+    reset_password
 };
 
 function login(email, password) {
@@ -49,6 +51,34 @@ function register(user) {
         });
 }
 
+function password_reset_request(email) {
+    const requestOptions = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({'email':email})
+    };
+
+    return fetch(`${config.apiUrl}/api/password-reset-email`, requestOptions)
+        .then(handleResponse)
+        .then(() => {
+            return true;
+        });
+}
+
+function reset_password(password, token) {
+    const requestOptions = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({'password':password, 'token': token})
+    };
+
+    return fetch(`${config.apiUrl}/api/reset-password`, requestOptions)
+        .then(handleResponse)
+        .then(() => {
+            return true;
+        });
+}
+
 function update(user) {
     const requestOptions = {
         method: 'PUT',
@@ -56,7 +86,7 @@ function update(user) {
         body: JSON.stringify(user)
     };
 
-    return fetch(`${config.apiUrl}/users/`, requestOptions).then(handleResponse);;
+    return fetch(`${config.apiUrl}/users/`, requestOptions).then(handleResponse);
 }
 
 // prefixed function name with underscore because delete is a reserved word in javascript

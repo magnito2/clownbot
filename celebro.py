@@ -34,7 +34,7 @@ class Celebro:
             if not exchange_account_models:
                 logger.error("No single account has been added, please add accounts")
             for account in exchange_account_models:
-                logger.info(f"[+] Adding {account.exchange}")
+                logger.info(f"[+] Adding {account.user.username}- {account.exchange}")
                 if account.exchange == "BINANCE":
                     kwargs = {
                         'api_key': account.api_key,
