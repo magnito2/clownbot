@@ -505,7 +505,7 @@ class BinanceTrader(Trader):
                 logger.error(f"order {order_model.order_id} was rejected")
                 await self.delete_order_model(client_order_id=trade.sell_order_id)
 
-            if params['price'] < trade.buy_price * (1 - self.stop_loss_trigger):
+            if trade.buy_price and params['price'] < trade.buy_price * (1 - self.stop_loss_trigger):
 
                 if  params['price'] * trade.buy_quantity < 0.00101:
                     logger.info(f"[!] {params['symbol']} Order notional of {trade.buy_quantity * params['price']} below min notional, current price {params['price']}")

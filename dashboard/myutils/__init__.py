@@ -40,6 +40,9 @@ def send_reset_password_instructions(user):
     token = generate_reset_password_token(user)
     reset_link = frontend_url('reset-password', token=token)
 
+    print(f"[+] The security is {_security}")
+
+
     if config_value('SEND_PASSWORD_RESET_EMAIL'):
         _security.send_mail(config_value('EMAIL_SUBJECT_PASSWORD_RESET'),
                             user.email, 'reset_instructions',
