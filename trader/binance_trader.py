@@ -487,36 +487,40 @@ class BinanceTrader(Trader):
             self.price_streamer.unsubscribe(params['symbol'], self)
         for trade in sym_open_trades:
 
-            if trade.buy_price == 0:
+            order_model = await self.get_order_model(trade.sell_order_id)
+
+            if not trade.buy_price:
                 # check if buy price is greater than zero, not necessary but external bots sometimes sell at market price.
                 if not "BUY_" in trade.buy_order_id:
                     logger.info("[!] Externally initiated order, deleting")
                     await self.delete_trade_model(trade.buy_order_id)
-                    return
+                    await self.delete_order_model(trade.buy_order_id)
+                    continue
                 else:
                     logger.error(f"[!!] order {trade.buy_order_id}Price is missing, check bot...")
 
-            order_model = await self.get_order_model(trade.sell_order_id)
+
             if not order_model:
                 logger.error(f"[!] Could not find order with client order id {trade.sell_order_id}")
                 self.price_streamer.unsubscribe(params['symbol'], self)
-                return
-            if order_model.order_id == -1:
+                continue
+            if order_model.order_id == -1 or order_model.order_id == '-1':
                 logger.error(f"order {order_model.order_id} was rejected")
                 await self.delete_order_model(client_order_id=trade.sell_order_id)
+                continue
 
             if trade.buy_price and params['price'] < trade.buy_price * (1 - self.stop_loss_trigger):
 
                 if  params['price'] * trade.buy_quantity < 0.00101:
                     logger.info(f"[!] {params['symbol']} Order notional of {trade.buy_quantity * params['price']} below min notional, current price {params['price']}")
-                    return
+                    continue
 
                 resp = await self.cancel_order(trade.symbol, order_id=order_model.order_id)
                 if resp['error']:
                     logger.error(resp['message'])
                     if 'Unknown order sent' in resp['message']:
                         await self.delete_order_model(order_model.client_order_id)
-                    return
+                    continue
                 order_id = f"SELL-LOSS_{trade.buy_order_id.split('_')[1]}"
                 sell_price = params['price'] * 0.995
                 await self.orders_queue.put({
