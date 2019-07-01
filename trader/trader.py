@@ -103,7 +103,7 @@ class Trader:
                         print(result)
                         if result['side'] == "BUY":
                             await self.send_notification(f"{emoji.emojize(':white_check_mark:', use_aliases=True)} {emoji.emojize(':id:', use_aliases=True)} {trade_model.id} Trade Initiated\n "
-                                                     f"Symbol: {result['symbol']}\n quantity: {result['buy_quantity'].:8f} entry price {result['buy_price']:.8f}\n"
+                                                     f"Symbol: {result['symbol']}\n quantity: {result['buy_quantity']:.8f} entry price {result['buy_price']:.8f}\n"
                                                      f"target price: {float(result['buy_price']) * (1+self.profit_margin):.8f}\n"
                                                      f"stop loss trigger price: {float(result['buy_price']) * (1 - self.stop_loss_trigger):.8f}\n"
                                                      f"signal: {resp['additional_info']['signal']}")
