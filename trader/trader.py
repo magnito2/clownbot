@@ -47,7 +47,7 @@ class Trader:
 
         self.last_bot_restart = datetime.utcnow()
         self.bot_restart_interval = 60*60*3
-        self.routine_check_interval = 60*30
+        self.routine_check_interval = 60*1
 
         if kwargs.get('use_fixed_amount_per_order'):
             self.btc_per_order = float(kwargs.get('fixed_amount_per_order'))
@@ -95,7 +95,7 @@ class Trader:
                         result = resp['result']
                         self.streamer.add_trades(result['symbol'], self.process_symbol_stream)
                         await self.update_trade(**result)
-                        asyncio.sleep(3)
+                        await asyncio.sleep(3)
                         trade_model = await self.get_trade_model(buy_order_id=result['buy_order_id'])
                         if not trade_model:
                             logger.error(f"[+] Could not find trade model of id {result['buy_order_id']}")
@@ -103,14 +103,14 @@ class Trader:
                         print(result)
                         if result['side'] == "BUY":
                             await self.send_notification(f"{emoji.emojize(':white_check_mark:', use_aliases=True)} {emoji.emojize(':id:', use_aliases=True)} {trade_model.id} Trade Initiated\n "
-                                                     f"Symbol: {result['symbol']}\n quantity: {result['buy_quantity']:.8f} entry price {result['buy_price']:.8f}\n"
+                                                     f"Symbol: {result['symbol']}\n quantity: {float(result['buy_quantity']):.8f} \nentry price {float(result['buy_price']):.8f}\n"
                                                      f"target price: {float(result['buy_price']) * (1+self.profit_margin):.8f}\n"
                                                      f"stop loss trigger price: {float(result['buy_price']) * (1 - self.stop_loss_trigger):.8f}\n"
                                                      f"signal: {resp['additional_info']['signal']}")
                         elif result['side'] == "SELL":
                             await self.send_notification(f"{emoji.emojize(':white_check_mark:', use_aliases=True)} {emoji.emojize(':id:', use_aliases=True)} {trade_model.id} Buy Complete, Now Selling \n"
-                                                         f"symbol: {trade_model.symbol:.8f}\n Buy price {trade_model.buy_price:.8f}\n Sell price {trade_model.sell_price:.8f}\n"
-                                                         f"Quantity {trade_model.quantity:.8f}")
+                                                         f"symbol: {trade_model.symbol}\n Buy price {float(trade_model.buy_price):.8f}\n Sell price {float(trade_model.sell_price):.8f}\n"
+                                                         f"Quantity {float(trade_model.quantity):.8f}")
                         continue #go to next loop
                     else:
                         logger.debug(f'[!] Order not understood, {order_params}')
@@ -123,7 +123,7 @@ class Trader:
 
                 if (datetime.utcnow() - self.last_portfolio_update_time).seconds > self.portfolio_update_interval:
                     self.last_portfolio_update_time = datetime.utcnow()
-                    await self.update_portfolio()
+                    #await self.update_portfolio()
 
                 await self.routine_check()
 
@@ -324,7 +324,6 @@ class Trader:
                     asset_model = Asset(exchange=self._exchange, name=asset['name'], free=asset['free'], locked=asset['locked'])
                     account_model.assets.append(asset_model)
             asset_names = [asset['name'] for asset in assets]
-            print(f"Our asset names are {asset_names}")
             for asset in account_model.assets:
                 if asset.name not in asset_names:
                     logger.info(f'Removing {asset.name}')
