@@ -31,6 +31,8 @@ class Config(object):
     SECURITY_RECOVERABLE = True
     SECURITY_CONFIRMABLE = True
 
+    SECURITY_EMAIL_SENDER = "Clown Bot"
+
     SECURITY_RESET_URL = "/reset-password"
 
     JWT_SECRET_KEY = 'C-yiJqXMN6yEDnMpCxNtag'

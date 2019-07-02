@@ -7,6 +7,8 @@ from flask_security.recoverable import generate_reset_password_token, send_passw
 from flask import current_app as app
 from werkzeug.local import LocalProxy
 
+from flask_mail import Message
+
 # Convenient references
 _security = LocalProxy(lambda: app.extensions['security'])
 
@@ -44,7 +46,7 @@ def send_reset_password_instructions(user):
 
 
     if config_value('SEND_PASSWORD_RESET_EMAIL'):
-        _security.send_mail(config_value('EMAIL_SUBJECT_PASSWORD_RESET'),
+        send_mail(config_value('EMAIL_SUBJECT_PASSWORD_RESET'),
                             user.email, 'reset_instructions',
                             user=user, reset_link=reset_link)
 
@@ -65,3 +67,36 @@ def update_password(user, password):
     _datastore.commit()
     send_password_reset_notice(user)
     password_reset.send(app._get_current_object(), user=user)
+
+def send_mail(subject, recipient, template, **context):
+    """Send an email via the Flask-Mail extension.
+
+    :param subject: Email subject
+    :param recipient: Email recipient
+    :param template: The name of the email template
+    :param context: The context to render the template with
+    """
+
+    context.setdefault('security', _security)
+    context.update(_security._run_ctx_processor('mail'))
+
+    sender = str(_security.email_sender)
+    if isinstance(sender, LocalProxy):
+        sender = sender._get_current_object()
+
+    msg = Message(subject,
+                  sender=sender,
+                  recipients=[recipient])
+
+    ctx = ('security/email', template)
+    if config_value('EMAIL_PLAINTEXT'):
+        msg.body = _security.render_template('%s/%s.txt' % ctx, **context)
+    if config_value('EMAIL_HTML'):
+        msg.html = _security.render_template('%s/%s.html' % ctx, **context)
+
+    if _security._send_mail_task:
+        _security._send_mail_task(msg)
+        return
+
+    mail = app.extensions.get('mail')
+    mail.send(msg)
