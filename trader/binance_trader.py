@@ -93,7 +93,7 @@ class BinanceTrader(Trader):
                 'exchange': self._exchange,
                 'symbol': resp['symbol'],
                 'buy_order_id': resp['clientOrderId'],
-                'buy_time': datetime.fromtimestamp(int(resp['transactTime'])/1000),
+                'buy_time': datetime.utcfromtimestamp(int(resp['transactTime'])/1000),
                 'quote_asset': symbol_info.quote_asset,
                 'base_asset': symbol_info.base_asset,
                 'buy_price': resp['price'],
@@ -110,7 +110,7 @@ class BinanceTrader(Trader):
                 'exchange': self._exchange,
                 'symbol': resp['symbol'],
                 'sell_order_id': resp['clientOrderId'],
-                'sell_time': datetime.fromtimestamp(int(resp['transactTime'])/1000),
+                'sell_time': datetime.utcfromtimestamp(int(resp['transactTime'])/1000),
                 'sell_price': resp['price'],
                 'sell_quantity': resp['origQty'],
                 'sell_status': resp['status'],
@@ -261,7 +261,7 @@ class BinanceTrader(Trader):
                     'quantity': resp['origQty'],
                     'type': resp['type'],
                     'side': resp['side'],
-                    'order_time': datetime.fromtimestamp(int(resp["transactTime"])/1000),
+                    'order_time': datetime.utcfromtimestamp(int(resp["transactTime"])/1000),
                     'cummulative_filled_quantity': resp['executedQty'],
                     'cummulative_quote_asset_transacted': resp["cummulativeQuoteQty"],
                     'status': resp['status']
@@ -334,7 +334,7 @@ class BinanceTrader(Trader):
                     'stop_price': trade_params['stop_price'],
                     'commission': trade_params['commission'],
                     'commission_asset': trade_params['commissionAsset'],
-                    'order_time': datetime.fromtimestamp(int(trade_params['time'])/1000),
+                    'order_time': datetime.utcfromtimestamp(int(trade_params['time'])/1000),
                     'cummulative_filled_quantity': trade_params['cummulative_filled_quantity'],
                     'cummulative_quote_asset_transacted': trade_params['cummulative_quote_asset_transacted'],
                     'status': trade_params['status']
@@ -661,9 +661,9 @@ class BinanceTrader(Trader):
 
     def get_symbol_info(self, symbol):
         if os.path.exists('last_binance_symbols_update'):
-            last_update = datetime.fromtimestamp(os.path.getmtime('last_binance_symbols_update'))
+            last_update = datetime.utcfromtimestamp(os.path.getmtime('last_binance_symbols_update'))
         else:
-            last_update = datetime.fromtimestamp(0)
+            last_update = datetime.utcfromtimestamp(0)
         with create_session() as session:
             if datetime.now() - last_update > timedelta(days=1) or not session.query(BinanceSymbol).filter_by(name=symbol).first() :
                 exchange_info = self.exchange_info
