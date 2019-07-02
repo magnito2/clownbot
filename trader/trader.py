@@ -110,7 +110,7 @@ class Trader:
                         elif result['side'] == "SELL":
                             await self.send_notification(f"{emoji.emojize(':white_check_mark:', use_aliases=True)} {emoji.emojize(':id:', use_aliases=True)} {trade_model.id} Buy Complete, Now Selling \n"
                                                          f"symbol: {trade_model.symbol}\n Buy price {float(trade_model.buy_price):.8f}\n Sell price {float(trade_model.sell_price):.8f}\n"
-                                                         f"Quantity {float(trade_model.quantity):.8f}")
+                                                         f"Quantity {float(trade_model.sell_quantity):.8f}")
                         continue #go to next loop
                     else:
                         logger.debug(f'[!] Order not understood, {order_params}')
@@ -476,6 +476,5 @@ class Trader:
                 os.close(handler.fd)
         except Exception as e:
             logger.error(e)
-
         python = sys.executable
         os.execl(python, python, *sys.argv)

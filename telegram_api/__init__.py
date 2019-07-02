@@ -11,8 +11,6 @@ from telethon.tl import types
 logger = logging.getLogger('clone.tg')
 logging.getLogger('clone.tg').setLevel(level=logging.DEBUG)
 logging.getLogger('telethon').setLevel(level=logging.INFO)
-api_id = 895830
-api_hash = '318d4db283d08faa09644784e5e7a360'
 
 
 class MyTelegramClient:
