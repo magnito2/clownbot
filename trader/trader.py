@@ -102,15 +102,21 @@ class Trader:
                         print("*"*100)
                         print(result)
                         if result['side'] == "BUY":
-                            await self.send_notification(f"{emoji.emojize(':white_check_mark:', use_aliases=True)} {emoji.emojize(':id:', use_aliases=True)} {trade_model.id} Trade Initiated\n "
-                                                     f"Symbol: {result['symbol']}\n quantity: {float(result['buy_quantity']):.8f} \nentry price {float(result['buy_price']):.8f}\n"
-                                                     f"target price: {float(result['buy_price']) * (1+self.profit_margin):.8f}\n"
-                                                     f"stop loss trigger price: {float(result['buy_price']) * (1 - self.stop_loss_trigger):.8f}\n"
-                                                     f"signal: {resp['additional_info']['signal']}")
+                            await self.send_notification(f"{emoji.emojize(':new:', use_aliases=True)} Trade Initiated\n{emoji.emojize(':id:', use_aliases=True)}: #{trade_model.id}\n "
+                                                     f"Symbol: {result['symbol']}\n quantity: {float(result['buy_quantity']):.8f} \nEntry price: {float(result['buy_price']):.8f}\n"
+                                                     f"Target price: {float(result['buy_price']) * (1+self.profit_margin):.8f}\n"
+                                                     f"Stop loss trigger price: {float(result['buy_price']) * (1 - self.stop_loss_trigger):.8f}\n"
+                                                     f"Signal: {resp['additional_info']['signal']}")
                         elif result['side'] == "SELL":
-                            await self.send_notification(f"{emoji.emojize(':white_check_mark:', use_aliases=True)} {emoji.emojize(':id:', use_aliases=True)} {trade_model.id} Buy Complete, Now Selling \n"
-                                                         f"symbol: {trade_model.symbol}\n Buy price {float(trade_model.buy_price):.8f}\n Sell price {float(trade_model.sell_price):.8f}\n"
-                                                         f"Quantity {float(trade_model.sell_quantity):.8f}")
+                            if "SELL_" in trade_model.sell_order_id:
+                                await self.send_notification(f"{emoji.emojize(':white_check_mark:', use_aliases=True)}Now Selling\n {emoji.emojize(':id:', use_aliases=True)}: #{trade_model.id}\n"
+                                                         f"Symbol: {trade_model.symbol}\n Buy price: {float(trade_model.buy_price):.8f}\n Sell price: {float(trade_model.sell_price):.8f}\n"
+                                                         f"Quantity: {float(trade_model.sell_quantity):.8f}")
+                            elif "SELL-LOSS_" in trade_model.sell_order_id:
+                                await self.send_notification(
+                                    f"{emoji.emojize(':red_circle:', use_aliases=True)}Stop loss, Selling\n {emoji.emojize(':id:', use_aliases=True)}: #{trade_model.id}\n"
+                                    f"Symbol: {trade_model.symbol}\n Buy price: {float(trade_model.buy_price):.8f}\n Sell price: {float(trade_model.sell_price):.8f}\n"
+                                    f"Quantity: {float(trade_model.sell_quantity):.8f}")
                         continue #go to next loop
                     else:
                         logger.debug(f'[!] Order not understood, {order_params}')

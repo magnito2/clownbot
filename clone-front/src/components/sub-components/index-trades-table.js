@@ -136,7 +136,6 @@ class IndexTradesTable extends Component{
                 </div>
             </div>
         </div>
-
     }
 }
 
