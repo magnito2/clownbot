@@ -238,7 +238,7 @@ class BinanceTrader(Trader):
             trade_models = await self.get_trade_models()
             open_sell_trades = [trade for trade in trade_models if trade.buy_status == "FILLED" and not trade.sell_status == "FILLED" and not trade.health == "ERROR"]
             for trade in open_sell_trades:
-                self.price_streamer.subscribe(trade.symbol, self, trade.buy_price * (1- self.stop_loss_trigger))
+                self.price_streamer.subscribe(trade.symbol, self, trade.buy_order_id, trade.buy_price * (1- self.stop_loss_trigger))
 
         except binance.BinanceError as e:
             if e.code in [-2014, -2015]:
@@ -421,7 +421,7 @@ class BinanceTrader(Trader):
                             'buy_order_id': trade_params['client_order_id']
                         })
 
-                        self.price_streamer.subscribe(order_model_params['symbol'], self, avg_price * (1 - self.stop_loss_trigger))
+                        self.price_streamer.subscribe(order_model_params['symbol'], self, trade_params['client_order_id'], avg_price * (1 - self.stop_loss_trigger))
 
                         message = f"{emoji.emojize(':dollar:', use_aliases=True)} {order_model_params['status']}: {order_model_params['side']}ING {float(order_model_params['quantity']):.8f} {order_model_params['symbol']}@ {float(order_model_params['price']):.8f}"
                         message += f"\n Amount bought {float(trade_params['cummulative_filled_quantity']):.8f} at {avg_price} \n"
@@ -442,7 +442,7 @@ class BinanceTrader(Trader):
                                 message += f"\n Sold {float(trade_model.sell_quantity_executed):.8f} {trade_model.symbol}@ {float(trade_model.sell_price):.8f}"
                                 message += f"\n Profit {float(trade_model.sell_price) * float(trade_model.sell_quantity_executed) - float(trade_model.buy_price) * float(trade_model.buy_quantity_executed):.8f}\n"
 
-                            self.price_streamer.unsubscribe(trade_model.symbol, self)
+                            self.price_streamer.unsubscribe(trade_model.symbol, trade_model.buy_order_id)
 
                 if trade_params['type'] == "CANCELED": #delete cancelled sells too
                     order = self.get_order_model(client_order_id=trade_params['client_order_id'])
@@ -726,3 +726,24 @@ class BinanceTrader(Trader):
 
     def sync_get_open_orders(self, symbol):
         return self.account.open_orders(symbol)
+
+    async def create_stop_loss_order(self, params):
+        print("I have recieved the following result,")
+        print(params)
+        buy_order_id = params['buy_order_id']
+        trade_model = await self.get_trade_model(buy_order_id=buy_order_id)
+        if not trade_model:
+            print(f"[!] The trade model {buy_order_id} cannot be found")
+            await self.price_streamer.unsubscribe(params['symbol'], buy_order_id)
+            return
+        resp = await self.cancel_order(trade_model.symbol, client_order_id=trade_model.sell_order_id)
+
+        if resp['error']:
+            logger.error(resp['message'])
+            if 'Unknown order sent' in resp['message']:
+                self.send_notification(
+                    f"{emoji.emojize(':x:', use_aliases=True)} Trade id {trade_model.id} Order Cloid {trade_model.sell_order_id} SELL {trade_model.sell_quantity} {trade_model.symbol} @ {trade_model.sell_price} cannot be cancelled. Order is unknown to the exchange")
+                await self.delete_order_model(client_order_id=trade_model.sell_order_id)
+                await self.update_trade(side='BUY', exchange_account_id=self.account_model_id,
+                                        buy_order_id=trade_model.buy_order_id, health="ERROR",
+                                        reason="Sell order is not found in exchange, could have been cancelled externally")
