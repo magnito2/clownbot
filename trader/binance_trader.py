@@ -4,6 +4,7 @@ from binance import binance
 from utils import run_in_executor
 from datetime import datetime, timedelta
 from models import create_session, BinanceSymbol
+from utils.sync import async_to_sync, sync_to_async
 
 logger = logging.getLogger('clone.binance_trader')
 logger.setLevel(logging.WARNING)
@@ -240,6 +241,8 @@ class BinanceTrader(Trader):
             for trade in open_sell_trades:
                 self.price_streamer.subscribe(trade.symbol, self, trade.buy_order_id, trade.buy_price * (1- self.stop_loss_trigger))
 
+            await self.warm_up_sync_trades_and_orders() #to ensure trades and orders are at sync with server...
+
         except binance.BinanceError as e:
             if e.code in [-2014, -2015]:
                 await self.invalidate_keys()
@@ -273,6 +276,54 @@ class BinanceTrader(Trader):
             self._update_order_model(client_order_id=client_order_id, **_order_params)
         except binance.BinanceError as e:
             logger.error(f"[!] Error cancelling the order, {e} code {e.code} symbol {symbol} id {order_id} cloid {client_order_id}")
+            if client_order_id:
+                order = async_to_sync(self.get_order_model(client_order_id=client_order_id))
+            else:
+                order = async_to_sync(self.get_order_model(order_id=order_id))
+            if not order:
+                return {'error': True, 'message': 'Order model not found'}
+
+            _order = async_to_sync(self.query_order(order.symbol, order.order_id))
+            if not _order:
+                return {'error': True, 'message': 'Order not found in server'}
+
+            order_model_params = {
+                'exchange': self._exchange,
+                'order_id': _order['orderId'],
+                'client_order_id': _order['clientOrderId'],
+                'price': _order['price'],
+                'quantity': _order['origQty'],
+                'cummulative_filled_quantity': _order['executedQty'],
+                'cummulative_quote_asset_transacted': _order['cummulativeQuoteQty'],
+                'status': _order['status']
+            }
+
+            async_to_sync(self.update_order_model(**order_model_params))
+
+            if _order['side'] == 'BUY':
+                trade_model_params = {
+                    'exchange': self._exchange,
+                    'buy_order_id': _order['clientOrderId'],
+                    'buy_status': _order['status'],
+                    'buy_quantity_executed': _order['executedQty'],
+                    'exchange_account_id': self.account_model_id,
+                    'side': 'BUY'
+                }
+                async_to_sync(self.update_trade(**trade_model_params))
+
+            else:
+                trade_model = async_to_sync(self.get_trade_model(sell_order_id=_order['clientOrderId']))
+                if trade_model:
+                    trade_model_params = {
+                        'exchange': self._exchange,
+                        'buy_order_id': trade_model.buy_order_id,
+                        'sell_status': _order['status'],
+                        'sell_quantity_executed': _order['executedQty'],
+                        'exchange_account_id': self.account_model_id,
+                        'side': 'SELL'
+                    }
+                    async_to_sync(self.update_trade(**trade_model_params))
+
             return {'error' : True, 'message': str(e)}
         except Exception as e:
             logger.error(f"[!] Error cancelling the order, {e}")
@@ -283,6 +334,73 @@ class BinanceTrader(Trader):
     def query_order(self, symbol, order_id):
         resp = self.account.query_order(symbol=symbol, order_id=order_id)
         return resp
+
+    async def warm_up_sync_trades_and_orders(self):
+        trades = await self.get_trade_models()
+        open_buys = [trade for trade in trades if trade.buy_status in ['NEW', 'PARTIALLY_FILLED']]
+        open_sells = [trade for trade in trades if trade.sell_status in ['NEW', 'PARTIALLY_FILLED']]
+
+        for trade in open_buys:
+            order = await self.get_order_model(client_order_id=trade.buy_order_id)
+            if not order:
+                await self.update_trade(side='BUY', exchange_account_id=self.account_model_id,
+                                      buy_order_id=trade.buy_order_id, health="ERROR",
+                                      reason="Invalid buy order Id")
+                continue
+            _order = await self.query_order(trade.symbol, order.order_id)
+            order_model_params = {
+                'exchange': self._exchange,
+                'order_id': _order['orderId'],
+                'client_order_id': _order['clientOrderId'],
+                'price': _order['price'],
+                'quantity': _order['origQty'],
+                'cummulative_filled_quantity': _order['executedQty'],
+                'cummulative_quote_asset_transacted': _order['cummulativeQuoteQty'],
+                'status': _order['status']
+            }
+
+            await self.update_order_model(**order_model_params)
+
+            trade_model_params = {
+                'exchange': self._exchange,
+                'buy_order_id': _order['clientOrderId'],
+                'buy_status': _order['status'],
+                'buy_quantity_executed': _order['executedQty'],
+                'exchange_account_id': self.account_model_id,
+                'side': 'BUY'
+            }
+            await self.update_trade(**trade_model_params)
+
+        for trade in open_sells:
+            order = await self.get_order_model(client_order_id=trade.sell_order_id)
+            if not order:
+                await self.update_trade(side='SELL', exchange_account_id=self.account_model_id,
+                                      buy_order_id=trade.buy_order_id, health="ERROR",
+                                      reason="Invalid buy order Id")
+                continue
+            _order = await self.query_order(trade.symbol, order.order_id)
+            order_model_params = {
+                'exchange': self._exchange,
+                'order_id': _order['orderId'],
+                'client_order_id': _order['clientOrderId'],
+                'price': _order['price'],
+                'quantity': _order['origQty'],
+                'cummulative_filled_quantity': _order['executedQty'],
+                'cummulative_quote_asset_transacted': _order['cummulativeQuoteQty'],
+                'status': _order['status']
+            }
+
+            await self.update_order_model(**order_model_params)
+
+            trade_model_params = {
+                'exchange': self._exchange,
+                'buy_order_id': trade.buy_order_id,
+                'sell_status': _order['status'],
+                'sell_quantity_executed': _order['executedQty'],
+                'exchange_account_id': self.account_model_id,
+                'side': 'SELL'
+            }
+            await self.update_trade(**trade_model_params)
 
     async def process_user_socket_message(self, msg):
         # throw it in the database
