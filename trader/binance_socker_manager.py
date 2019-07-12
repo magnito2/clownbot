@@ -76,7 +76,7 @@ class BinanceSocketManager:
                     params = {
                         'symbol': msg['s'],
                         'price': float(kline['c']),  # use open price of period,
-                        'trade_id' : sub['trade_id']
+                        'buy_order_id' : sub['buy_order_id']
                     }
                     asyncio.create_task(sub['bot'].create_stop_loss_order(params))
                 except Exception as e:
