@@ -25,6 +25,7 @@ class ProcessSignal:
 class CQSScalpingFree(ProcessSignal):
 
     name = 'CQSScalpingFree'
+    short_name = "CQSSF"
     re_pattern = "#([A-Z]+_[A-Z]+)\s+\((\w+)\)\n(\w+)\s-\s(\d+\.\d+)\nTarget:\s(\d+\.\d+)[\s\S]+\s#([0-9]{5})"
 
     @classmethod
@@ -51,6 +52,7 @@ class CQSScalpingFree(ProcessSignal):
 class MagnitoCrypto(ProcessSignal):
 
     name = 'magnitocrypto'
+    short_name = "MGC"
     re_pattern = ""
 
     def __init__(self, SigClass):
@@ -63,6 +65,7 @@ class MagnitoCrypto(ProcessSignal):
 class QualitySignalsChannel(ProcessSignal):
 
     name = "QualitySignalsChannel"
+    short_name = "QSC"
     re_pattern = ".*\n\n.*\s(Buy|Sell)\s#([A-Z]+)/#([A-Z]+)[\s\S]*#(BINANCE|BITTREX)\n\n[\s\S]*#(\d+)" \
                  "[\s\S]*Entry:\s(\d+\.\d+)\s-\s(\d+\.\d+)[\s\S]*\n[\s\S]*Current\sask:\s(\d+\.\d+)[\s\S]*\n[\s\S]*Target\s1:\s\s(\d+\.\d+)[\s\S]*"
 
@@ -90,6 +93,7 @@ class CryptoPingMikeBot(ProcessSignal):
 
     re_pattern = ".*#([A-Z]+)\nUp signal on (Binance|Bittrex)\n[\s\S]*price: (\d+\.\d+) BTC\n[\s\S]*"
     name = "CryptoPingNovemberBot"
+    short_name = "Ping"
 
     @classmethod
     def process(cls, message):

@@ -10,6 +10,7 @@ import os,sys,psutil
 import emoji
 
 logger = logging.getLogger('clone.trader')
+logger.setLevel(logging.ERROR)
 
 class Trader:
     '''
@@ -31,7 +32,6 @@ class Trader:
         self.profit_margin = kwargs.get('profit_margin') / 100
         self.order_timeout = kwargs.get('order_timeout')
         self.stop_loss_trigger = kwargs.get('stop_loss_trigger') / 100
-        self.streamer = None
         self.active_symbols = []
         self.open_orders = []
         self.active_symbol_prices = {}
@@ -93,7 +93,7 @@ class Trader:
                             continue
                         logger.info(resp)
                         result = resp['result']
-                        self.streamer.add_trades(result['symbol'], self.process_symbol_stream)
+
                         await self.update_trade(**result)
                         await asyncio.sleep(3)
                         trade_model = await self.get_trade_model(buy_order_id=result['buy_order_id'])

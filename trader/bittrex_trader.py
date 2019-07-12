@@ -6,6 +6,7 @@ from utils import run_in_executor
 from datetime import datetime
 
 logger = logging.getLogger('clone.bittrex_trader')
+logger.setLevel(logging.ERROR)
 
 class HandleSocket(BittrexSocket):
 

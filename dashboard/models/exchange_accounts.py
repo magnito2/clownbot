@@ -24,6 +24,8 @@ class ExchangeAccount(db.Model):
     manual_orders = db.relationship('ManualOrder', backref='exchange_account', lazy=True)
     assets = db.relationship('Asset', backref='exchange_account', lazy=True)
     valid_keys = db.Column(db.Boolean)
+    max_drawdown = db.Column(db.Float)  # maximum coin to be used in trades per time. defaults to 50%
+    max_orders_per_pair = db.Column(db.Integer)  # maximum orders to be placed per pair
 
     def serialize(self):
         return {
@@ -41,7 +43,9 @@ class ExchangeAccount(db.Model):
             'fixed_amount_per_order': self.fixed_amount_per_order,
             'use_fixed_amount_per_order': self.use_fixed_amount_per_order,
             'portfolio_uri': f'/api/portfolio?exchange_account_id={self.id}',
-            'valid_keys': self.valid_keys
+            'valid_keys': self.valid_keys,
+            'max_drawdown': self.max_drawdown,
+            'max_orders_per_pair': self.max_orders_per_pair
         }
 
     def __repr__(self):

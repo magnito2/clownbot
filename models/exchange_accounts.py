@@ -30,3 +30,5 @@ class ExchangeAccount(Base):
     manual_orders = relationship('ManualOrder', backref='exchange_account', lazy=True)
     valid_keys = Column(Boolean)
     assets = relationship('Asset', backref='exchange_account', lazy=True)
+    max_drawdown = Column(Float) #maximum coin to be used in trades per time. defaults to 50%
+    max_orders_per_pair = Column(Integer) #maximum orders to be placed per pair

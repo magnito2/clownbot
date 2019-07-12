@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from models import create_session, BinanceSymbol
 
 logger = logging.getLogger('clone.binance_trader')
+logger.setLevel(logging.WARNING)
 binance.__log_enabled = True
 
 class BinanceTrader(Trader):
@@ -237,7 +238,7 @@ class BinanceTrader(Trader):
             trade_models = await self.get_trade_models()
             open_sell_trades = [trade for trade in trade_models if trade.buy_status == "FILLED" and not trade.sell_status == "FILLED" and not trade.health == "ERROR"]
             for trade in open_sell_trades:
-                self.price_streamer.subscribe(trade.symbol, self)
+                self.price_streamer.subscribe(trade.symbol, self, trade.buy_price * (1- self.stop_loss_trigger))
 
         except binance.BinanceError as e:
             if e.code in [-2014, -2015]:
@@ -250,6 +251,9 @@ class BinanceTrader(Trader):
     @run_in_executor
     def cancel_order(self, symbol, order_id=None, client_order_id=None):
         logger.debug(f"[*] Attempting to cancel order cloid  {client_order_id} oid {order_id}")
+        if order_id == -1:
+            logger.error(f"Order {symbol} has order_id is -1.")
+            return {'error': True, 'message': 'Cannot cancel a rejected order'}
         try:
             resp = self.account.cancel_order(symbol=symbol, order_id=order_id, orig_client_order_id=client_order_id)
             client_order_id = resp['clientOrderId']
@@ -268,7 +272,7 @@ class BinanceTrader(Trader):
                 }
             self._update_order_model(client_order_id=client_order_id, **_order_params)
         except binance.BinanceError as e:
-            logger.error(f"[!] Error cancelling the order, {e} code {e.code} symbol {symbol} id {order_id}")
+            logger.error(f"[!] Error cancelling the order, {e} code {e.code} symbol {symbol} id {order_id} cloid {client_order_id}")
             return {'error' : True, 'message': str(e)}
         except Exception as e:
             logger.error(f"[!] Error cancelling the order, {e}")
@@ -417,21 +421,25 @@ class BinanceTrader(Trader):
                             'buy_order_id': trade_params['client_order_id']
                         })
 
+                        self.price_streamer.subscribe(order_model_params['symbol'], self, avg_price * (1 - self.stop_loss_trigger))
+
                         message = f"{emoji.emojize(':dollar:', use_aliases=True)} {order_model_params['status']}: {order_model_params['side']}ING {float(order_model_params['quantity']):.8f} {order_model_params['symbol']}@ {float(order_model_params['price']):.8f}"
                         message += f"\n Amount bought {float(trade_params['cummulative_filled_quantity']):.8f} at {avg_price} \n"
                         message += f"Target sell price {sell_price:.8f}"
 
                     if trade_params['side'] == "SELL" and trade_params['status'] == 'FILLED':
                         if trade_model:
+                            message = f"{emoji.emojize(':id:', use_aliases=True)} #{trade_model.id}"
+                            message += f"Symbol {trade_model.symbol}"
                             if float(trade_model.sell_price) * float(trade_model.sell_quantity_executed) - float(trade_model.buy_price) * float(trade_model.buy_quantity_executed) > 0:
-                                message = f"{emoji.emojize(':white_check_mark:', use_aliases=True)} {emoji.emojize(':dollar:', use_aliases=True)} Trade Closed at Profit"
-                                message += f"\n Bought {float(trade_model.buy_quantity_executed):.8f} @ {float(trade_model.buy_price):.8f}"
-                                message += f"\n Sold {float(trade_model.sell_quantity_executed):.8f} @ {float(trade_model.sell_price):.8f}"
+                                message += f"{emoji.emojize(':white_check_mark:', use_aliases=True)} {emoji.emojize(':dollar:', use_aliases=True)} Trade Closed at Profit"
+                                message += f"\n Bought {float(trade_model.buy_quantity_executed):.8f} {trade_model.symbol}@ {float(trade_model.buy_price):.8f}"
+                                message += f"\n Sold {float(trade_model.sell_quantity_executed):.8f} {trade_model.symbol}@ {float(trade_model.sell_price):.8f}"
                                 message += f"\n Profit {float(trade_model.sell_price) * float(trade_model.sell_quantity_executed) - float(trade_model.buy_price) * float(trade_model.buy_quantity_executed):.8f}\n"
                             else:
-                                message = f"{emoji.emojize(':x:', use_aliases=True)} Trade Closed at Loss"
-                                message += f"\n Bought {float(trade_model.buy_quantity_executed):.8f} @ {float(trade_model.buy_price):.8f}"
-                                message += f"\n Sold {float(trade_model.sell_quantity_executed):.8f} @ {float(trade_model.sell_price):.8f}"
+                                message += f"{emoji.emojize(':x:', use_aliases=True)} Trade Closed at Loss"
+                                message += f"\n Bought {float(trade_model.buy_quantity_executed):.8f} {trade_model.symbol}@ {float(trade_model.buy_price):.8f}"
+                                message += f"\n Sold {float(trade_model.sell_quantity_executed):.8f} {trade_model.symbol}@ {float(trade_model.sell_price):.8f}"
                                 message += f"\n Profit {float(trade_model.sell_price) * float(trade_model.sell_quantity_executed) - float(trade_model.buy_price) * float(trade_model.buy_quantity_executed):.8f}\n"
 
                             self.price_streamer.unsubscribe(trade_model.symbol, self)
@@ -609,7 +617,11 @@ class BinanceTrader(Trader):
                             logger.error(resp['message'])
                             if 'Unknown order sent' in resp['message']:
                                 #await self.delete_order_model(trade_model.buy_order_id)
-                                self.send_admin_notification()
+                                admin_message = f"{emoji.emojize(':x:', use_aliases=True)} Unknown Order\n"
+                                admin_message += f"#{emoji.emojize(':id:', use_aliases=True)} {trade_model.id}\n"
+                                admin_message += f"Order id {trade_model.sell_order_id}\n"
+                                admin_message += f"Symbol {trade_model.symbol}, Buy {trade_model.buy_price}, Current Market Price {market_price}"
+                                self.send_admin_notification(admin_message)
 
                         order_id = f"SELL-LOSS_{trade_model.buy_order_id.split('_')[1]}"
 

@@ -13,6 +13,7 @@ class Signal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64))
     description = db.Column(db.String(255))
+    short_name = db.Column(db.String(64))
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     exchange_accounts = db.relationship('ExchangeAccount', secondary=exchange_accounts_signals, backref='ex_signals')
 
@@ -20,6 +21,7 @@ class Signal(db.Model):
         resp =  {
             'name': self.name,
             'description': self.description,
+            'short_name': self.short_name
         }
         if acc:
             resp['subscribed'] = True if self in acc.signals else False
