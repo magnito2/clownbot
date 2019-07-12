@@ -429,8 +429,8 @@ class BinanceTrader(Trader):
 
                     if trade_params['side'] == "SELL" and trade_params['status'] == 'FILLED':
                         if trade_model:
-                            message = f"{emoji.emojize(':id:', use_aliases=True)} #{trade_model.id}"
-                            message += f"Symbol {trade_model.symbol}"
+                            message = f"{emoji.emojize(':id:', use_aliases=True)} #{trade_model.id}\n"
+                            message += f"Symbol {trade_model.symbol}\n"
                             if float(trade_model.sell_price) * float(trade_model.sell_quantity_executed) - float(trade_model.buy_price) * float(trade_model.buy_quantity_executed) > 0:
                                 message += f"{emoji.emojize(':white_check_mark:', use_aliases=True)} {emoji.emojize(':dollar:', use_aliases=True)} Trade Closed at Profit"
                                 message += f"\n Bought {float(trade_model.buy_quantity_executed):.8f} {trade_model.symbol}@ {float(trade_model.buy_price):.8f}"
