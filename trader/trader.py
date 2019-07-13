@@ -10,7 +10,7 @@ import os,sys,psutil
 import emoji
 
 logger = logging.getLogger('clone.trader')
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.INFO)
 
 class Trader:
     '''

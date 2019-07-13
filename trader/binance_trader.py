@@ -7,7 +7,7 @@ from models import create_session, BinanceSymbol
 from utils.sync import async_to_sync, sync_to_async
 
 logger = logging.getLogger('clone.binance_trader')
-logger.setLevel(logging.WARNING)
+logger.setLevel(logging.INFO)
 binance.__log_enabled = True
 
 class BinanceTrader(Trader):
