@@ -61,7 +61,8 @@ class Celebro:
                     self.exchange_traders.append(binance_trader)
 
                 elif account.exchange == "BITTREX":
-                    kwargs = {
+
+                    '''kwargs = {
                         'api_key': account.api_key,
                         'api_secret': account.api_secret,
                         'percent_size': account.min_order_size,
@@ -83,7 +84,8 @@ class Celebro:
                         continue
                     kwargs['subscribed_signals'].append('ManualOrder')
                     bittrex_trader = BittrexTrader(**kwargs)
-                    self.exchange_traders.append(bittrex_trader)
+                    self.exchange_traders.append(bittrex_trader)'''
+                    continue
 
             startup = StartUp()
             session.add(startup)
