@@ -70,7 +70,7 @@ class BinanceSocketManager:
         if not kline_closed:
             return
         for sub in self.__subscription[symbol]:
-            if sub['stop_price'] <= close_price:
+            if close_price <= sub['stop_price']:
                 print(f"[!] Stop loss hit, {symbol}, stop_price {sub['stop_price']}, current price {close_price}")
                 try:
                     params = {
