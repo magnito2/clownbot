@@ -2,6 +2,7 @@ from flask_restful import Resource, abort, fields, reqparse
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from ..models import Trade, ExchangeAccount
 from .. import  user_datastore
+from sqlalchemy import desc
 
 parser = reqparse.RequestParser()
 parser.add_argument("start_id")

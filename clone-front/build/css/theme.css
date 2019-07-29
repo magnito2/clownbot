@@ -4664,11 +4664,11 @@ section {
 }
 
 .table-data3 thead tr th {
-    font-size: 16px;
+    font-size: 12px;
     color: #fff;
     font-weight: 400;
     text-transform: capitalize;
-    padding: 18px 40px;
+    padding: 12px 30px;
     padding-right: 10px;
 }
 
@@ -4686,12 +4686,12 @@ section {
 
 .table-data3 thead tr th:last-child {
     text-align: right;
-    padding-right: 50px;
+    padding-right: 30px;
 }
 
 .table-data3 tbody tr td:last-child {
     text-align: right;
-    padding-right: 50px;
+    padding-right: 30px;
 }
 
 .table-data3 tbody tr {
@@ -4714,9 +4714,9 @@ section {
 .table-data3 tbody td {
     border-bottom: 1px solid #f5f5f5;
     background: #fff;
-    font-size: 14px;
+    font-size: 10px;
     color: #808080;
-    padding: 12px 40px;
+    padding: 12px 25px;
     padding-right: 10px;
 }
 

@@ -20,7 +20,7 @@ class ExchangeAccount(db.Model):
     signals = db.relationship('Signal', secondary=exchange_accounts_signals, backref='exchange_account')
     portfolio = db.relationship('Portfolio', backref='exchange_account', lazy=True)
     orders = db.relationship('Order', backref='exchange_account', lazy=True)
-    trades = db.relationship('Trade', backref='exchange_account', lazy=True)
+    trades = db.relationship('Trade', backref='exchange_account', lazy=True, order_by="desc(Trade.id)")
     manual_orders = db.relationship('ManualOrder', backref='exchange_account', lazy=True)
     assets = db.relationship('Asset', backref='exchange_account', lazy=True)
     valid_keys = db.Column(db.Boolean)

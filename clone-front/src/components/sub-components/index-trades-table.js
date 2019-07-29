@@ -98,7 +98,7 @@ class IndexTradesTable extends Component{
                                                         <td class={trade.sell_status === "FILLED" ? "process" : "denied"}>{
                                                             trade.sell_status === "FILLED" ? "COMPLETE" : "ONGOING"
                                                         }</td>
-                                                        <td><Moment fromNowDuring={1000*60*60*24} format="DD-MM-YY,HH:mm">{trade.timestamp}</Moment></td>
+                                                        <td><Moment fromNowDuring={1000*60*60*24} local format="DD-MM-YY,HH:mm">{trade.timestamp}</Moment></td>
                                                     </tr>
                                                 })
                                             }

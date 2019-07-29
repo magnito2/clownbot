@@ -41,7 +41,7 @@ class Trader:
         self.subscribed_signals = kwargs.get('subscribed_signals')
         self.account_model_id = kwargs.get('exchange_account_model_id')
         self.last_portfolio_update_time = datetime.utcnow()
-        self.portfolio_update_interval = kwargs.get('portfolio_update_interval', 60*30)
+        self.portfolio_update_interval = kwargs.get('portfolio_update_interval', 60*1)
         self.keep_running = True
         self.api_key = kwargs.get('api_key')
 
@@ -129,7 +129,7 @@ class Trader:
 
                 if (datetime.utcnow() - self.last_portfolio_update_time).seconds > self.portfolio_update_interval:
                     self.last_portfolio_update_time = datetime.utcnow()
-                    #await self.update_portfolio()
+                    await self.update_portfolio()
 
                 await self.routine_check()
 
@@ -225,6 +225,9 @@ class Trader:
 
     @run_in_executor
     def get_order_model(self, client_order_id=None, order_id=None):
+        return self.sync_get_order_model(client_order_id, order_id)
+
+    def sync_get_order_model(self, client_order_id=None, order_id=None):
         with create_session() as session:
             if client_order_id:
                 order = session.query(Order).filter_by(exchange=self._exchange).filter_by(client_order_id=client_order_id).first()
@@ -417,6 +420,9 @@ class Trader:
         if self.outgoing_message_queue:  # inform admin about the new order
             await self.outgoing_message_queue.put({'id': 'me', 'message': notification, 'sender': self._exchange})
 
+    def get_symbol_info(self, symbol):
+        pass
+
     async def update_portfolio(self):
         """
         Runs every set time to save current snapshot of the assets in BTC value
@@ -427,6 +433,7 @@ class Trader:
             assets = await self.get_asset_models()
             portfolio = 0
             for asset in assets:
+                reverse_flag = False
                 if asset.name == "BTC":
                     portfolio += (float(asset.free) + float(asset.locked))
                 else:
@@ -434,6 +441,14 @@ class Trader:
                         symbol = f"BTC-{asset.name}"
                     elif self._exchange == "BINANCE":
                         symbol = f"{asset.name}BTC"
+                        sym_model = self.get_symbol_info(symbol)
+                        if not sym_model:
+                            symbol = f"BTC{asset.name}"
+                            sym_model = self.get_symbol_info(symbol)
+                            if not sym_model:
+                                logger.error(f"The asset is not paired up with bitcoin, 2 stage conversion is not yet implemented")
+                                continue
+                            reverse_flag = True
                     else:
                         logger.error(f"Unknown Exchange {self._exchange}")
                         continue
@@ -442,7 +457,11 @@ class Trader:
                         logger.error(f"[!] Couldnt get price of {symbol}, reason: {price_resp['message']}")
                         continue
                     price = float(price_resp['result'])
-                    portfolio += (float(asset.free) + float(asset.locked)) * price
+                    if not reverse_flag:
+                        portfolio += (float(asset.free) + float(asset.locked)) * price
+                    else:
+                        portfolio += (float(asset.free) + float(asset.locked))/price
+
             logger.info(f"Total portfolio is {portfolio}")
             await self.update_portfolio_model(portfolio)
         except Exception as e:

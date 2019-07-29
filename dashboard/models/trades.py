@@ -43,7 +43,7 @@ class Trade(db.Model):
             'sell_quantity': self.sell_quantity,
             'signal': self.trade_signal.signal_name if self.trade_signal else "",
             'PNL': 0 if self.sell_price is None or self.sell_quantity is None or self.buy_price is None or self.buy_price is None else round(self.sell_price * self.sell_quantity - self.buy_price * self.buy_quantity, 6),
-            'sellStatus': self.sell_status,
+            'sell_status': self.sell_status,
             'timestamp': self.timestamp.isoformat()
         }
 

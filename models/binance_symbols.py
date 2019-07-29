@@ -18,6 +18,8 @@ class BinanceSymbol(Base):
     tick_size = Column(Float)
     multiplierUp =  Column(Float)
     multiplierDown = Column(Float)
+    lastPrice = Column(Float)
+    lastPrice_timestamp = Column(DateTime)
 
     def __repr__(self):
         return f"<Binance-Symbol({self.name}>"

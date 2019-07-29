@@ -189,3 +189,11 @@ class SyncToAsync:
 # Lowercase is more sensible for most things
 sync_to_async = SyncToAsync
 async_to_sync = AsyncToSync
+
+"""
+Usage:: 
+
+    await sync.sync_to_async(sync_func)("Otwani", "Mumo", "Sly")
+    
+    sync.async_to_sync(async_func)("Imo", "Ajums", "Deif")
+"""

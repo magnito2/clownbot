@@ -48,19 +48,6 @@ class BinanceSocketManager:
                         del self.__subscription[symbol]
                         self.streamer.remove_candlesticks(symbol, "1m")
 
-    async def process_symbol_stream(self, msg):
-        kline = msg['k']
-        if self.last_kline_price != float(kline['o']):
-            params = {
-                'symbol': msg['s'],
-                'price': float(kline['o']) #use open price of period
-            }
-            self.last_kline_price = float(kline['o'])
-            for bot in self.__subscription[params['symbol']]:
-                try:
-                    asyncio.create_task(bot.process_symbol_stream(params))
-                except Exception as e:
-                    logger.error(e)
 
     async def check_stop_loss(self, msg):
         kline = msg['k']

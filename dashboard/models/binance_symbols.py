@@ -16,6 +16,8 @@ class BinanceSymbol(db.Model):
     tick_size = db.Column(db.Float)
     multiplierUp = db.Column(db.Float)
     multiplierDown = db.Column(db.Float)
+    lastPrice = db.Column(db.Float)
+    lastPrice_timestamp = db.Column(db.DateTime)
 
     def serialize(self):
         return {
