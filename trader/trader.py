@@ -54,6 +54,8 @@ class Trader:
         if kwargs.get('percent_size'):
             self.percent_size = float(kwargs.get('percent_size')) / 100
 
+        self.username = kwargs.get('username')
+
     async def run(self):
         '''
         The main loop, see if this can be removed
@@ -414,11 +416,11 @@ class Trader:
 
     async def send_notification(self, notification):
         if self.outgoing_message_queue and self.user_tg_id and self.receive_notifications:  # inform user about the new order
-            await self.outgoing_message_queue.put({'id': self.user_tg_id, 'message': notification, 'sender': self._exchange})
+            await self.outgoing_message_queue.put({'id': self.user_tg_id, 'message': notification, 'sender': self._exchange, 'username': self.username})
 
     async def send_admin_notification(self, notification):
         if self.outgoing_message_queue:  # inform admin about the new order
-            await self.outgoing_message_queue.put({'id': 'me', 'message': notification, 'sender': self._exchange})
+            await self.outgoing_message_queue.put({'id': 'me', 'message': notification, 'sender': self._exchange, 'username': self.username})
 
     def get_symbol_info(self, symbol):
         pass

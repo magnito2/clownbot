@@ -50,7 +50,8 @@ class Celebro:
                         'use_fixed_amount_per_order': account.use_fixed_amount_per_order,
                         'fixed_amount_per_order': account.fixed_amount_per_order,
                         'exchange_account_model_id': account.id,
-                        'price_streamer': self.binance_price_streamer
+                        'price_streamer': self.binance_price_streamer,
+                        'username': account.user.username
                     }
                     valid = self.validate_account_model_params(kwargs)
                     if not valid:
@@ -75,7 +76,8 @@ class Celebro:
                         'subscribed_signals': [signal.name for signal in account.signals],
                         'use_fixed_amount_per_order': account.use_fixed_amount_per_order,
                         'fixed_amount_per_order': account.fixed_amount_per_order,
-                        'exchange_account_model_id': account.id
+                        'exchange_account_model_id': account.id,
+                        'username': account.user.username
                     }
 
                     valid = self.validate_account_model_params(kwargs)

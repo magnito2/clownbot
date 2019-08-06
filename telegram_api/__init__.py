@@ -7,6 +7,7 @@ import logging, asyncio
 from .tg_signals import CQSScalpingFree, MagnitoCrypto, QualitySignalsChannel, CryptoPingMikeBot
 from models import create_session, TradeSignal, Signal
 from telethon.tl import types
+import emoji
 
 logger = logging.getLogger('clone.tg')
 logging.getLogger('clone.tg').setLevel(level=logging.DEBUG)
@@ -88,7 +89,7 @@ class MyTelegramClient:
             try:
                 message = await asyncio.wait_for(self.outgoing_messages_queue.get(), timeout=3600)
                 logger.info(f"[+] Recieved a new message, {message}")
-                f_message = f"{message.get('sender')}: {message['message']}"
+                f_message = f"{emoji.emojize(':bust_in_silhouette:', use_aliases=True)}{message.get('username')}\n{message.get('sender')}: {message['message']}"
                 await self.client.send_message(message['id'], f_message)
             except asyncio.TimeoutError:
                 logger.info("listening for messages to send out via telegram")
