@@ -1,9 +1,10 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
+from sqlalchemy.ext.associationproxy import association_proxy
 
 from . import Base
-from .signals import exchange_accounts_signals
+
 
 class ExchangeAccount(Base):
 
@@ -23,8 +24,8 @@ class ExchangeAccount(Base):
     receive_notifications = Column(Boolean)
     use_fixed_amount_per_order = Column(Boolean)
     fixed_amount_per_order = Column(Float)
-    signals = relationship('Signal', secondary=exchange_accounts_signals, backref='exchange_account')
-    portfolio = relationship('Portfolio', backref='exchange_account', lazy=True)
+    signals = relationship('Signal', secondary='exchange_accounts_signals', backref='exchange_account')
+    portfolio = relationship('Portfolio', back_populates='exchange_account', lazy=True)
     orders = relationship('Order', backref='exchange_account', lazy=True)
     trades = relationship('Trade', backref='exchange_account', lazy=True)
     manual_orders = relationship('ManualOrder', backref='exchange_account', lazy=True)
@@ -32,3 +33,6 @@ class ExchangeAccount(Base):
     assets = relationship('Asset', backref='exchange_account', lazy=True)
     max_drawdown = Column(Float) #maximum coin to be used in trades per time. defaults to 50%
     max_orders_per_pair = Column(Integer) #maximum orders to be placed per pair
+
+    signal_percent_size = None
+    profit_target = None

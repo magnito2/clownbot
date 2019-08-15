@@ -44,3 +44,16 @@ from .portfolio import Portfolio
 from .manual_orders import ManualOrder
 from .binance_symbols import BinanceSymbol
 from .trade_signals import TradeSignal
+
+
+from sqlalchemy import Column, Integer, ForeignKey, Float
+from sqlalchemy.orm import relationship, backref
+class ExchangeAccountSignal(Base):
+    __tablename__="exchange_accounts_signals"
+
+    signal_id = Column(Integer, ForeignKey('signals.id'), primary_key=True)
+    exchange_account_id = Column(Integer, ForeignKey('exchange_account.id'), primary_key=True)
+    percent_investment = Column(Float) #set the lot size for each signal individually
+    profit_target = Column(Float) #set the profit target for each signal individually
+    exchange_account = relationship(ExchangeAccount, backref=backref('signal_assoc'))
+    signal = relationship(Signal, backref=backref('exchange_account_assoc'))

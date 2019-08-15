@@ -9,12 +9,13 @@ class TradeSignal(Base):
 
     id = Column(Integer, primary_key=True)
     signal_id = Column(Integer, ForeignKey('signals.id'), nullable=False)
+    signal = relationship('Signal', back_populates='trade_signals', lazy=True)
     signal_name = Column(String(64))
     exchange = Column(String(64))
     symbol = Column(String(64))
     side = Column(String(64))
     price = Column(Float)
-    trades = relationship('Trade', backref='trade_signal')
+    trades = relationship('Trade', back_populates='trade_signal')
     timestamp = Column(DateTime, index=True, default=datetime.utcnow)
 
     def __repr__(self):
