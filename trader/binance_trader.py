@@ -8,7 +8,7 @@ from utils.sync import async_to_sync, sync_to_async
 from functools import reduce
 
 logger = logging.getLogger('clone.binance_trader')
-logger.setLevel(logging.INFO)
+#logger.setLevel(logging.DEBUG)
 binance.__log_enabled = True
 
 class BinanceTrader(Trader):
