@@ -6,6 +6,7 @@ from flask_migrate import Migrate
 from flask_security import SQLAlchemyUserDatastore, Security
 from flask_jwt_extended import JWTManager
 from flask_mail import Mail
+from flask_seeder import FlaskSeeder
 
 app = Flask(__name__, static_url_path="")
 app.config.from_object(Config)
@@ -14,6 +15,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 jwt = JWTManager(app)
 mail = Mail(app)
+seeder = FlaskSeeder(app, db)
 
 from .models import User, Role
 

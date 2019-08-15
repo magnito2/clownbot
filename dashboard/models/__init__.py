@@ -40,10 +40,23 @@ from .trades import Trade
 from .orders import Order
 from .exchange_accounts import ExchangeAccount
 from .revokedtokens import RevokedTokenModel
-from .signals import exchange_accounts_signals, Signal
+from .signals import Signal
 from .portfolio import Portfolio
 from .assets import Asset
 from .startups import StartUp
 from .manual_orders import ManualOrder
 from .binance_symbols import BinanceSymbol
 from .trade_signals import TradeSignal
+
+
+
+class ExchangeAccountSignal(db.Model):
+    __tablename__="exchange_accounts_signals"
+
+    id = db.Column('id', db.Integer, primary_key=True)
+    signal_id = db.Column(db.Integer, db.ForeignKey('signals.id'), primary_key=True)
+    exchange_account_id = db.Column(db.Integer, db.ForeignKey('exchange_account.id'), primary_key=True)
+    percent_investment = db.Column(db.Float) #set the lot size for each signal individually
+    profit_target = db.Column(db.Float) #set the profit target for each signal individually
+    exchange_account = db.relationship(ExchangeAccount, backref=db.backref('signal_assoc'))
+    signal = db.relationship(Signal, backref=db.backref('exchange_account_assoc'))

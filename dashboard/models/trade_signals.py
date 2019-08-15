@@ -7,12 +7,13 @@ class TradeSignal(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     signal_id = db.Column(db.Integer, db.ForeignKey('signals.id'), nullable=False)
+    signal = db.relationship('Signal', back_populates='trade_signals', lazy=True)
     signal_name = db.Column(db.String(64))
     exchange = db.Column(db.String(64))
     symbol = db.Column(db.String(64))
     side = db.Column(db.String(64))
     price = db.Column(db.Float)
-    trades = db.relationship('Trade', backref='trade_signal')
+    trades = db.relationship('Trade', back_populates='trade_signal', lazy=True)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
 
     def serialize(self):

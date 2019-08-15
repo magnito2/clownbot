@@ -2,10 +2,10 @@ from .. import db
 from datetime import datetime
 
 # Define models
-exchange_accounts_signals = db.Table('exchange_accounts_signals',
+'''exchange_accounts_signals = db.Table('exchange_accounts_signals',
         db.Column('id', db.Integer, primary_key=True),
         db.Column('exchange_account_id', db.Integer(), db.ForeignKey('exchange_account.id')),
-        db.Column('signal_id', db.Integer(), db.ForeignKey('signals.id')))
+        db.Column('signal_id', db.Integer(), db.ForeignKey('signals.id')))'''
 
 
 class Signal(db.Model):
@@ -15,7 +15,9 @@ class Signal(db.Model):
     description = db.Column(db.String(255))
     short_name = db.Column(db.String(64))
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
-    exchange_accounts = db.relationship('ExchangeAccount', secondary=exchange_accounts_signals, backref='ex_signals')
+    exchange_accounts = db.relationship('ExchangeAccount', secondary='exchange_accounts_signals', backref='ex_signals')
+    trades = db.relationship('Trade', back_populates='signal', lazy=True)
+    trade_signals = db.relationship('TradeSignal', back_populates='signal', lazy=True)
 
     def serialize(self, acc=None):
         resp =  {

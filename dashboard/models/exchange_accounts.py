@@ -1,6 +1,5 @@
 from .. import db
 from datetime import datetime
-from .signals import exchange_accounts_signals
 
 class ExchangeAccount(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -17,7 +16,7 @@ class ExchangeAccount(db.Model):
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     user_tg_id = db.Column(db.String(256))
     receive_notifications = db.Column(db.Boolean)
-    signals = db.relationship('Signal', secondary=exchange_accounts_signals, backref='exchange_account')
+    signals = db.relationship('Signal', secondary='exchange_accounts_signals', backref='exchange_account')
     portfolio = db.relationship('Portfolio', backref='exchange_account', lazy=True)
     orders = db.relationship('Order', backref='exchange_account', lazy=True)
     trades = db.relationship('Trade', backref='exchange_account', lazy=True, order_by="desc(Trade.id)")

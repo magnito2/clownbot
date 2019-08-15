@@ -25,6 +25,9 @@ class Trade(db.Model):
     buy_time = db.Column(db.DateTime)
     sell_time = db.Column(db.DateTime)
     trade_signal_id = db.Column(db.Integer, db.ForeignKey('trade_signals.id'), nullable=True)
+    trade_signal = db.relationship('TradeSignal', back_populates='trades', lazy=True)
+    signal_id = db.Column(db.Integer, db.ForeignKey('signals.id'), nullable=True)
+    signal = db.relationship('Signal', back_populates='trades', lazy=True)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     health = db.Column(db.String(64))
     reason = db.Column(db.String(255))
@@ -48,4 +51,4 @@ class Trade(db.Model):
         }
 
     def __repr__(self):
-        return f"<Trade({self.id}, BOID {self.buy_order_id}, SOID {self.sell_order_id}, BP {self.buy_price}, SP {self.sell_price}, BQ {self.buy_quantity})"
+        return f"<Trade({self.id}, BOID {self.buy_order_id}, SOID {self.sell_order_id}, BP {self.buy_price}, SP {self.sell_price}, BQ {self.buy_quantity})>"
