@@ -364,7 +364,7 @@ class BinanceTrader(Trader):
                 return {'error': True, 'message': str(e)}
 
         except Exception as e:
-            logger.error(f"[!] Error cancelling the order, {e}")
+            logger.exception(f"[!] Error cancelling the order, {e}")
             return {'error': True, 'message': str(e)}
         return {'error': False}
 
