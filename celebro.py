@@ -51,7 +51,9 @@ class Celebro:
                         'fixed_amount_per_order': account.fixed_amount_per_order,
                         'exchange_account_model_id': account.id,
                         'price_streamer': self.binance_price_streamer,
-                        'username': account.user.username
+                        'username': account.user.username,
+                        'max_orders_per_symbol': account.max_orders_per_pair,
+                        'max_drawdown': account.max_drawdown
                     }
                     valid = self.validate_account_model_params(kwargs)
                     if not valid:
