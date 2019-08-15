@@ -9,6 +9,7 @@ class IndexTradesTable extends Component{
         this.state = {
             pageNumber:1,
             account: "all",
+            filter_orders: "pending_orders"
         }
         this.handleChange = this.handleChange.bind(this);
     }
@@ -38,7 +39,13 @@ class IndexTradesTable extends Component{
         else{
             alert('finisher');
         }
-    }
+    };
+
+    handleRadio = name => (e) => {
+        if(name === "all_orders" || name === "pending_orders" || name === "complete_orders"){
+            this.setState({filter_orders: name});
+        }
+    };
 
     render(){
         const {trades} = this.props;
@@ -49,12 +56,24 @@ class IndexTradesTable extends Component{
         const end = this.state.pageNumber * this.props.itemsCountPerPage;
         const pageCount = parseInt(filtered_trades.length / this.props.itemsCountPerPage) + 1;
         const show_trades = filtered_trades.slice(start, end);
+        let show_trades_state_filtered;
+        const state_filtered_orders = this.state.filter_orders;
+        switch(this.state.filter_orders){
+            case "all_orders":
+                show_trades_state_filtered = show_trades;
+                break;
+            case "pending_orders":
+                show_trades_state_filtered = show_trades.filter(trade => trade.sell_status !== "FILLED");
+                break;
+            case "complete_orders":
+                show_trades_state_filtered = show_trades.filter(trade => trade.sell_status === "FILLED");
+        };
         return <div>
             <div class="row m-t-30">
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <h4>{account[0].toUpperCase() + account.slice(1)} Trades</h4>
+                            <h4>{account[0].toUpperCase() + account.slice(1)} Trades <span className="badge badge-secondary">{state_filtered_orders.charAt(0).toUpperCase() + state_filtered_orders.slice(1).replace("_", " ")}</span></h4>
                         </div>
                         <div class="card-body">
                             <div class="custom-tab">
@@ -69,6 +88,23 @@ class IndexTradesTable extends Component{
                                     </div>
                                 </nav>
                                 <div class="tab-content pl-3 pt-2" id="nav-tabContent">
+
+                                    <form>
+                                        <div class="row form-group">
+                                            <div class="form-check-inline form-check">
+                                                <label for="radio-all" class="form-check-label ">
+                                                    <input type="radio" id="radio-all" onClick={this.handleRadio('all_orders')} checked={state_filtered_orders === "all_orders"} class="form-check-input"/>All
+                                                </label>
+                                                <label for="radio-complete" class="form-check-label ">
+                                                    <input type="radio" id="radio-complete" onClick={this.handleRadio('complete_orders')} checked={state_filtered_orders === "complete_orders"} class="form-check-input"/>Complete
+                                                </label>
+                                                <label for="radio-pending" class="form-check-label ">
+                                                    <input type="radio" id="radio-pending" onClick={this.handleRadio('pending_orders')} checked={state_filtered_orders === "pending_orders"} class="form-check-input"/>Pending
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </form>
+
                                     <div class="table-responsive m-b-40">
                                         <table class="table table-borderless table-data3">
                                             <thead>
@@ -86,7 +122,7 @@ class IndexTradesTable extends Component{
                                             </thead>
                                             <tbody>
                                             {
-                                                show_trades.map((trade, index) => {
+                                                show_trades_state_filtered.map((trade, index) => {
                                                     return <tr>
                                                         <td>{trade.id}</td>
                                                         <td>{trade.signal}</td>
@@ -132,6 +168,30 @@ class IndexTradesTable extends Component{
                                 </li>
                             </ul>
                         </nav>
+                    </div>
+                </div>
+            </div>
+            <div class="modal fade" id="mediumModal" tabindex="-1" role="dialog" aria-labelledby="mediumModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="mediumModalLabel">Medium Modal</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <p>
+                                There are three species of zebras: the plains zebra, the mountain zebra and the Grévy's zebra. The plains zebra and the mountain
+                                zebra belong to the subgenus Hippotigris, but Grévy's zebra is the sole species of subgenus Dolichohippus. The latter
+                                resembles an ass, to which it is closely related, while the former two are more horse-like. All three belong to the
+                                genus Equus, along with other living equids.
+                            </p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary">Confirm</button>
+                        </div>
                     </div>
                 </div>
             </div>

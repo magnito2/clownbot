@@ -3,6 +3,7 @@ import {signalsConstants} from "../constants";
 const initialState = {
     list : [],
     checked_signals : [],
+    extra_params : [],
     loading: false,
 };
 
@@ -36,7 +37,8 @@ export function signals(state = initialState, action) {
             console.log('recieved checked signals');
             return {
                 ...state,
-                checked_signals : action.signals,
+                checked_signals : action.signals.signal_names,
+                extra_params: action.signals.extra_params,
                 loading: false
             };
         case signalsConstants.GET_REQUEST:
@@ -46,7 +48,6 @@ export function signals(state = initialState, action) {
                 ...state,
                 loading: true
             };
-        case signalsConstants.CREATE_SUCCESS:
         case signalsConstants.CREATE_FAILURE:
             return {
                 ...state,
