@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 from models import create_session, Order, Asset, Trade, Portfolio, ExchangeAccount
 from utils import run_in_executor
+from utils.sync import async_to_sync, sync_to_async
 
 import os,sys,psutil
 import emoji
@@ -55,6 +56,7 @@ class Trader:
             self.percent_size = float(kwargs.get('percent_size')) / 100
 
         self.username = kwargs.get('username')
+        self.max_orders_per_symbol = kwargs.get('max_orders_per_symbol', 2)
 
     async def run(self):
         '''
@@ -88,6 +90,15 @@ class Trader:
                         continue
                     if order_params['exchange'] == self._exchange:
                         logger.debug(f'[+] __ New__Order__Being__Created')
+
+                        '''
+                        Allow for overiding default params with user specified params for signal
+                        '''
+                        account_signal_assoc = await sync_to_async(self.get_account_signal_assoc)(signal_name=order_params.get('signal_name'))
+                        if account_signal_assoc:
+                            order_params['signal_overides'] = {
+                                'profit_target': account_signal_assoc.profit_target,
+                            }
                         resp = await self.create_order(**order_params)
                         if resp['error']:
                             logger.error(resp['message'])
@@ -104,9 +115,17 @@ class Trader:
                         print("*"*100)
                         print(result)
                         if result['side'] == "BUY":
+
+                            signal_assoc = await sync_to_async(self.get_account_signal_assoc)(
+                                signal_id=trade_model.signal.id)
+                            if signal_assoc and signal_assoc.profit_target:
+                                sell_price = trade_model.buy_price * (1 + signal_assoc.profit_target)
+                            else:
+                                sell_price = trade_model.buy_price * (1 + self.profit_margin)
+
                             await self.send_notification(f"{emoji.emojize(':new:', use_aliases=True)} Trade Initiated\n{emoji.emojize(':id:', use_aliases=True)}: #{trade_model.id}\n "
                                                      f"Symbol: {result['symbol']}\n quantity: {float(result['buy_quantity']):.8f} \nEntry price: {float(result['buy_price']):.8f}\n"
-                                                     f"Target price: {float(result['buy_price']) * (1+self.profit_margin):.8f}\n"
+                                                     f"Target price: {sell_price:.8f}\n"
                                                      f"Stop loss trigger price: {float(result['buy_price']) * (1 - self.stop_loss_trigger):.8f}\n"
                                                      f"Signal: {resp['additional_info']['signal']}")
                         elif result['side'] == "SELL":
@@ -505,3 +524,67 @@ class Trader:
             logger.error(e)
         python = sys.executable
         os.execl(python, python, *sys.argv)
+
+
+    def get_account_signal_assoc(self, signal_name=None, signal_id=None):
+        """
+        returns the relationship model between exchange account and the telegram signal
+        from the exchange_account_signal pivot table.
+        :param signal_name:
+        :return:
+        """
+        if not signal_name and not signal_id:
+            return None
+
+        with create_session() as session:
+            account_model = session.query(ExchangeAccount).filter_by(id=self.account_model_id).first()
+            sig_assocs = account_model.signal_assoc
+
+            if signal_name:
+                wanted_assocs = [assoc for assoc in sig_assocs if assoc.signal.name == signal_name]
+            else:
+                wanted_assocs = [assoc for assoc in sig_assocs if assoc.signal.id == signal_id]
+            wanted_assoc = wanted_assocs[0] if len(wanted_assocs) else None
+            return wanted_assoc
+
+    def signal_can_buy(self, signal_name, symbol):
+
+
+        signal_assoc = self.get_account_signal_assoc(signal_name)
+        if not signal_assoc or not signal_assoc.percent_investment:
+            return True
+
+        symbol_info = self.get_symbol_info(symbol)
+        asset = async_to_sync(self.get_asset_models)(asset=symbol_info.quote_asset)
+        if not asset:
+            print("Quote asset not found")
+            return False
+        print(f"Asset is {asset.name}, free {asset.free}, locked {asset.locked}")
+
+
+        with create_session() as session:
+            trades_models = session.query(Trade).filter_by(exchange=self._exchange).filter_by(exchange_account_id=self.account_model_id).all()
+            open_trades_models = [trade for trade in trades_models if trade.sell_status != "FILLED" and trade.health != "ERROR"]
+            quote_trades_models = [trade_model for trade_model in open_trades_models if trade_model.quote_asset == symbol_info.quote_asset]
+            signal_trade_models = [trade_model for trade_model in  quote_trades_models if trade_model.signal and trade_model.signal.name == signal_name]
+            held_portfolio = 0
+            total_portfolio = 0
+            for trade in signal_trade_models:
+                buy_quote = trade.buy_price * trade.buy_quantity
+                sell_quote = trade.sell_price * trade.sell_quantity
+                held_portfolio += buy_quote - sell_quote
+
+            for trade in quote_trades_models:
+                buy_quote = trade.buy_price * trade.buy_quantity
+                sell_quote = trade.sell_price * trade.sell_quantity
+                total_portfolio += buy_quote - sell_quote
+                total_portfolio += float(asset.free) + float(asset.locked)
+
+            if signal_assoc.percent_investment and held_portfolio/total_portfolio > signal_assoc.percent_investment:
+                return False
+            else:
+                print(f"Percent investment: {signal_assoc.percent_investment}")
+                print(f"Held portfolio: {held_portfolio}")
+                print(f"total portfolio: {total_portfolio}")
+                print("Yes, we can buy")
+                return True

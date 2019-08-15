@@ -5,6 +5,7 @@ from utils import run_in_executor
 from datetime import datetime, timedelta
 from models import create_session, BinanceSymbol
 from utils.sync import async_to_sync, sync_to_async
+from functools import reduce
 
 logger = logging.getLogger('clone.binance_trader')
 logger.setLevel(logging.INFO)
@@ -66,6 +67,9 @@ class BinanceTrader(Trader):
             price = quantity_resp['price']
 
         if side == "BUY":
+            #check that the signal has not maxed out on quantity to trade
+            if not self.signal_can_buy(kwargs.get('signal_name'), symbol):
+                return {'error': True, 'message': f'Signal {kwargs.get("signal_name")} has maxed out on the limit set to it'}
             order_id = f"BUY_{str(uuid.uuid4())[:23]}"
         else:
             order_id = kwargs.get('order_id', f"SELL_{str(uuid.uuid4())[:23]}")
@@ -81,8 +85,8 @@ class BinanceTrader(Trader):
             orders = self.sync_get_open_orders(symbol)
             if orders:
                 logger.debug(f"[+] Symbol {symbol} has open orders.")
-                if len(orders) > 2:
-                    return {'error': True, 'message': f'There are already two open orders for the symbol, cannot create a new one'}
+                if len(orders) > self.max_orders_per_symbol:
+                    return {'error': True, 'message': f'There are already {self.max_orders_per_symbol} open orders for the symbol, cannot create a new one'}
 
         print(f"{'+'*70}")
         print(f"New order, {symbol} {side} {order_type} {quantity} {price} {order_id}")
@@ -547,7 +551,14 @@ class BinanceTrader(Trader):
                 if trade_params['type'] == "TRADE":
                     if trade_params['side'] == "BUY" and trade_params['status'] in ['FILLED']: #we have bought something, lets put up a sell
                         avg_price = float(trade_params['cummulative_quote_asset_transacted']) / float(trade_params['cummulative_filled_quantity'])
-                        sell_price = avg_price * (1 + self.profit_margin)
+                        signal = trade_model.get_signal()
+                        signal_assoc = await sync_to_async(self.get_account_signal_assoc)(
+                            signal_id=signal.id)
+                        if signal_assoc and signal_assoc.profit_target:
+                            sell_price = avg_price * (1 + signal_assoc.profit_target)
+                        else:
+                            sell_price = avg_price * (1 + self.profit_margin)
+
                         logger.info(f"[+] Trade event, we've bought {trade_params['cummulative_filled_quantity']} at {avg_price}")
                         logger.info(f"[+] Placing a sell for {trade_params['cummulative_filled_quantity']} at {sell_price}")
                         sell_size_resp = await self.a_quantity_and_price_roundoff(symbol=trade_params['symbol'], price=sell_price, side='SELL')
@@ -562,6 +573,7 @@ class BinanceTrader(Trader):
                                 if sell_size_resp['error']:
                                     logger.error(f"[!] {sell_size_resp['message']}")
                                     return {'error': True, 'message': sell_size_resp['message']}
+
                         order_id = f"SELL_{trade_params['client_order_id'].split('_')[1]}" if len(trade_params['client_order_id'].split('_')) > 1 else f"SELL_{trade_params['client_order_id'][:30]}"
                         await self.orders_queue.put({
                             'symbol': trade_params['symbol'],
@@ -762,7 +774,12 @@ class BinanceTrader(Trader):
                     if not trade_model.buy_price:
                         logger.error(f"[!] Order has no buy price, check if it was a market order")
                         continue
-                    sell_price = trade_model.buy_price * (1 + self.profit_margin)
+                    signal = trade_model.get_signal()
+                    signal_assoc = await sync_to_async(self.get_account_signal_assoc)(signal_id=signal.id)
+                    if signal_assoc and signal_assoc.profit_target:
+                        sell_price = trade_model.buy_price * (1 + signal_assoc.profit_target)
+                    else:
+                        sell_price = trade_model.buy_price * (1 + self.profit_margin)
 
                     order_id = f"SELL_{trade_model.buy_order_id.split('_')[1][:23]}"
 
