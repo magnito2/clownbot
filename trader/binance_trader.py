@@ -775,9 +775,12 @@ class BinanceTrader(Trader):
                         logger.error(f"[!] Order has no buy price, check if it was a market order")
                         continue
                     signal = trade_model.get_signal()
-                    signal_assoc = await sync_to_async(self.get_account_signal_assoc)(signal_id=signal.id)
-                    if signal_assoc and signal_assoc.profit_target:
-                        sell_price = trade_model.buy_price * (1 + signal_assoc.profit_target)
+                    if signal:
+                        signal_assoc = await sync_to_async(self.get_account_signal_assoc)(signal_id=signal.id)
+                        if signal_assoc and signal_assoc.profit_target:
+                            sell_price = trade_model.buy_price * (1 + signal_assoc.profit_target)
+                        else:
+                            sell_price = trade_model.buy_price * (1 + self.profit_margin)
                     else:
                         sell_price = trade_model.buy_price * (1 + self.profit_margin)
 
