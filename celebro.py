@@ -65,7 +65,7 @@ class Celebro:
 
                 elif account.exchange == "BITTREX":
 
-                    '''kwargs = {
+                    kwargs = {
                         'api_key': account.api_key,
                         'api_secret': account.api_secret,
                         'percent_size': account.min_order_size,
@@ -79,7 +79,9 @@ class Celebro:
                         'use_fixed_amount_per_order': account.use_fixed_amount_per_order,
                         'fixed_amount_per_order': account.fixed_amount_per_order,
                         'exchange_account_model_id': account.id,
-                        'username': account.user.username
+                        'username': account.user.username,
+                        'max_orders_per_symbol': account.max_orders_per_pair,
+                        'max_drawdown': account.max_drawdown
                     }
 
                     valid = self.validate_account_model_params(kwargs)
@@ -88,7 +90,7 @@ class Celebro:
                         continue
                     kwargs['subscribed_signals'].append('ManualOrder')
                     bittrex_trader = BittrexTrader(**kwargs)
-                    self.exchange_traders.append(bittrex_trader)'''
+                    self.exchange_traders.append(bittrex_trader)
                     continue
 
             startup = StartUp()
@@ -164,8 +166,11 @@ class Celebro:
                     'subscribed_signals': [signal.name for signal in account.signals],
                     'use_fixed_amount_per_order': account.use_fixed_amount_per_order,
                     'fixed_amount_per_order': account.fixed_amount_per_order,
-                    'exchange_account_model_id': account.id
+                    'exchange_account_model_id': account.id,
+                    'btc_volume_increase_order_above': account.btc_volume_increase_order_above,
+                    'percent_increase_of_order_size': account.percent_increase_of_order_size
                 }
+
                 kwargs['subscribed_signals'].append('ManualOrder')
                 binance_trader = BinanceTrader(**kwargs)
                 self.exchange_traders.append(binance_trader)
@@ -187,8 +192,11 @@ class Celebro:
                     'subscribed_signals': [signal.name for signal in account.signals],
                     'use_fixed_amount_per_order': account.use_fixed_amount_per_order,
                     'fixed_amount_per_order': account.fixed_amount_per_order,
-                    'exchange_account_model_id': account.id
+                    'exchange_account_model_id': account.id,
+                    'btc_volume_increase_order_above': float(account.btc_volume_increase_order_above) if account.btc_volume_increase_order_above else 0,
+                    'percent_increase_of_order_size': float(account.percent_increase_of_order_size) if account.percent_increase_of_order_size else 0
                 }
+
                 kwargs['subscribed_signals'].append('ManualOrder')
                 bittrex_trader = BittrexTrader(**kwargs)
                 self.exchange_traders.append(bittrex_trader)

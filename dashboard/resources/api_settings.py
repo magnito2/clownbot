@@ -16,6 +16,8 @@ parser.add_argument('user_tg_id')
 parser.add_argument('receive_notifications')
 parser.add_argument('fixed_amount_per_order')
 parser.add_argument('use_fixed_amount_per_order')
+parser.add_argument('btc_volume_increase_order_above')
+parser.add_argument('percent_increase_of_order_size')
 
 class ExchangeSettings(Resource):
 
@@ -45,6 +47,8 @@ class ExchangeSettings(Resource):
         receive_notifications = args.get('receive_notifications')
         fixed_amount_per_order = args.get('fixed_amount_per_order')
         use_fixed_amount_per_order = args.get('use_fixed_amount_per_order')
+        btc_volume_increase_order_above = args.get('btc_volume_increase_order_above')
+        percent_increase_of_order_size = args.get('percent_increase_of_order_size')
 
         has_error = False
         response = ''
@@ -74,6 +78,10 @@ class ExchangeSettings(Resource):
                 exchange_account.use_fixed_amount_per_order = True if use_fixed_amount_per_order == "True" else False
             if fixed_amount_per_order:
                 exchange_account.fixed_amount_per_order = fixed_amount_per_order
+            if btc_volume_increase_order_above:
+                exchange_account.btc_volume_increase_order_above = btc_volume_increase_order_above
+            if percent_increase_of_order_size:
+                exchange_account.percent_increase_of_order_size = percent_increase_of_order_size
 
             db.session.commit()
 

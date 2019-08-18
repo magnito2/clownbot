@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { connect } from "react-redux";
-import {settingsActions} from "../../actions";
+import {settingsActions, alertActions} from "../../actions";
 
 class SettingsForm extends Component{
     constructor(props){
@@ -19,15 +19,19 @@ class SettingsForm extends Component{
             user_tg_id: '',
             use_fixed_amount_per_order : '',
             fixed_amount_per_order : '',
+            btc_volume_increase_order_above : '',
+            percent_increase_of_order_size : '',
             loading: false
         };
         this.handleSubmit = this.handleSubmit.bind(this);
         this.handleChange = this.handleChange.bind(this);
+        this.validateField = this.validateField.bind(this);
     }
 
     handleChange(e) {
         const { name } = e.target;
         const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+        if (!this.validateField(name, value)) return;
         this.setState({ [name]: value });
     }
 
@@ -43,7 +47,7 @@ class SettingsForm extends Component{
             exchange, api_key, api_secret,
             profit_margin, stop_loss_trigger, order_cancel_seconds,
             min_order_size, account_exists, user_tg_id, receive_notifications,
-            use_fixed_amount_per_order, fixed_amount_per_order
+            use_fixed_amount_per_order, fixed_amount_per_order, btc_volume_increase_order_above, percent_increase_of_order_size
         } = this.state;
         const { dispatch } = this.props;
         if (exchange && api_key && api_secret && !account_exists) {
@@ -51,10 +55,11 @@ class SettingsForm extends Component{
         }
         else if(account_exists && profit_margin && stop_loss_trigger && order_cancel_seconds)
         {
-            if(min_order_size || use_fixed_amount_per_order && fixed_amount_per_order){
+            if(min_order_size || (use_fixed_amount_per_order && fixed_amount_per_order)){
                 dispatch(settingsActions.create({
                     exchange, profit_margin, stop_loss_trigger, order_cancel_seconds, min_order_size, user_tg_id, receive_notifications,
-                    use_fixed_amount_per_order, fixed_amount_per_order, api_secret, api_key
+                    use_fixed_amount_per_order, fixed_amount_per_order, api_secret, api_key, btc_volume_increase_order_above,
+                    percent_increase_of_order_size
                 }));
             }
         }
@@ -104,6 +109,37 @@ class SettingsForm extends Component{
             if (exchange_settings.fixed_amount_per_order !== this.state.fixed_amount_per_order) {
                 this.setState({ fixed_amount_per_order: exchange_settings.fixed_amount_per_order });
             }
+            if (exchange_settings.btc_volume_increase_order_above !== this.state.btc_volume_increase_order_above) {
+                this.setState({ btc_volume_increase_order_above: exchange_settings.btc_volume_increase_order_above });
+            }
+            if (exchange_settings.percent_increase_of_order_size !== this.state.percent_increase_of_order_size) {
+                this.setState({ percent_increase_of_order_size: exchange_settings.percent_increase_of_order_size });
+            }
+        }
+    }
+
+    validateField(field, value){
+        if(field === "btc_volume_increase_order_above"){
+            if(isNaN(value)){
+                this.props.dispatch(alertActions.error("Numerical values only"));
+                return false;
+            }
+            else {
+                return true;
+            }
+        }
+        if(field === "percent_increase_of_order_size"){
+            if(isNaN(value)){
+                this.props.dispatch(alertActions.error("Numerical values only"));
+                return false;
+            }
+            if(parseFloat(value) < 1 || parseFloat(value) > 200){
+                this.props.dispatch(alertActions.error("Value should be between 1% and 200%"));
+                return false;
+            }
+            else {
+                return true;
+            }
         }
     }
 
@@ -111,7 +147,8 @@ class SettingsForm extends Component{
         const {
             api_key, api_secret, exchange, profit_margin, stop_loss_trigger,
             order_cancel_seconds, min_order_size, submitted, account_exists,
-            user_tg_id, receive_notifications, use_fixed_amount_per_order, fixed_amount_per_order
+            user_tg_id, receive_notifications, use_fixed_amount_per_order, fixed_amount_per_order,
+            btc_volume_increase_order_above, percent_increase_of_order_size
         } = this.state;
 
         return (
@@ -224,6 +261,29 @@ class SettingsForm extends Component{
                                 </div>
                             </div>
                         </div>
+                        <div class="form-group">
+                            <label>Increase Order Size when Volume is above </label>
+                            <div class="input-group">
+                                <input type="text"
+                                       name="btc_volume_increase_order_above"
+                                       value={btc_volume_increase_order_above}
+                                       onChange={this.handleChange}
+                                       class="form-control"
+                                />
+                            </div>
+                        </div>
+                        {parseFloat(btc_volume_increase_order_above) > 0 &&
+                        <div class="form-group">
+                            <label>Amount in percent to increase order by </label>
+                            <div class="input-group">
+                                <input type="text"
+                                       name="percent_increase_of_order_size"
+                                       value={percent_increase_of_order_size}
+                                       onChange={this.handleChange}
+                                       class="form-control"
+                                />
+                            </div>
+                        </div>}
                     </div>
                 </div>
                 }

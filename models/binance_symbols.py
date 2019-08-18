@@ -20,6 +20,8 @@ class BinanceSymbol(Base):
     multiplierDown = Column(Float)
     lastPrice = Column(Float)
     lastPrice_timestamp = Column(DateTime)
+    dailyVolume = Column(Float)
+    dailyVolume_timestamp = Column(DateTime)
 
     def __repr__(self):
         return f"<Binance-Symbol({self.name}>"

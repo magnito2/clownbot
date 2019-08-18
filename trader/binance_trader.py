@@ -5,7 +5,8 @@ from utils import run_in_executor
 from datetime import datetime, timedelta
 from models import create_session, BinanceSymbol
 from utils.sync import async_to_sync, sync_to_async
-from functools import reduce
+
+from trader.binance_portfolio import get_btc_price
 
 logger = logging.getLogger('clone.binance_trader')
 #logger.setLevel(logging.DEBUG)
@@ -98,7 +99,7 @@ class BinanceTrader(Trader):
             params = {
                 'exchange': self._exchange,
                 'symbol': resp['symbol'],
-                'buy_order_id': resp['clientOrderId'],
+                'buy_order_id': resp['orderId'],
                 'buy_time': datetime.utcfromtimestamp(int(resp['transactTime'])/1000),
                 'quote_asset': symbol_info.quote_asset,
                 'base_asset': symbol_info.base_asset,
@@ -115,7 +116,7 @@ class BinanceTrader(Trader):
             params = {
                 'exchange': self._exchange,
                 'symbol': resp['symbol'],
-                'sell_order_id': resp['clientOrderId'],
+                'sell_order_id': resp['orderId'],
                 'sell_time': datetime.utcfromtimestamp(int(resp['transactTime'])/1000),
                 'sell_price': resp['price'],
                 'sell_quantity': resp['origQty'],
@@ -170,7 +171,16 @@ class BinanceTrader(Trader):
                     budget = self.btc_per_order
                 else:
                     budget = total_asset_balance * self.percent_size
+
+                if self.btc_volume_increase_order_above: #we can increase the order size the X percent is daily volume is symbol is greater than Y
+                    symbol_daily_volume = self.get_daily_volume_btc(symbol)
+                    if symbol_daily_volume > self.btc_volume_increase_order_above:
+                        logger.info(f"[+] The daily volume of the symbol permits for an increase in order size, increasing the order size by {self.percent_increase_of_order_size} %")
+                        if budget * (1 + self.percent_increase_of_order_size) < free_balance:
+                            budget = budget * (1 + self.percent_increase_of_order_size)
+
                 base_quantity = budget / price
+
             else:
                 logger.warning("[!] Avoid placing sells without quantity, use buy quantity as quantity.")
                 base_quantity = free_balance
@@ -285,35 +295,35 @@ class BinanceTrader(Trader):
             logger.exception(e)
 
     @run_in_executor
-    def cancel_order(self, symbol, order_id=None, client_order_id=None):
-        logger.debug(f"[*] Attempting to cancel order cloid  {client_order_id} oid {order_id}")
+    def cancel_order(self, symbol, order_id=None):
+        logger.debug(f"[*] Attempting to cancel order oid {order_id}")
         if order_id == -1:
             logger.error(f"Order {symbol} has order_id is -1.")
             return {'error': True, 'message': 'Cannot cancel a rejected order'}
+        if order_id == None:
+            logger.error(f"Order {symbol} has no rder_id.")
+            return {'error': True, 'message': 'Specify order id'}
         try:
 
-            resp = self.account.cancel_order(symbol=symbol, order_id=order_id, orig_client_order_id=client_order_id)
-            client_order_id = resp['clientOrderId']
+            resp = self.account.cancel_order(symbol=symbol, order_id=order_id)
+            order_id = resp['orderId']
             _order_params = {
                     'exchange': self._exchange,
-                    'client_order_id': client_order_id,
+                    'client_order_id': resp['clientOrderId'],
                     'symbol': resp['symbol'],
                     'price': resp['price'],
                     'quantity': resp['origQty'],
                     'type': resp['type'],
                     'side': resp['side'],
-                    'order_time': datetime.utcfromtimestamp(int(resp["transactTime"])/1000),
+                    #'order_time': datetime.utcfromtimestamp(int(resp["transactTime"])/1000),
                     'cummulative_filled_quantity': resp['executedQty'],
                     'cummulative_quote_asset_transacted': resp["cummulativeQuoteQty"],
                     'status': resp['status']
                 }
-            self._update_order_model(client_order_id=client_order_id, **_order_params)
+            self._update_order_model(order_id=order_id, **_order_params)
         except binance.BinanceError as e:
-            logger.error(f"[!] Error cancelling the order, {e} code {e.code} symbol {symbol} id {order_id} cloid {client_order_id}")
-            if client_order_id:
-                order = self.sync_get_order_model(client_order_id=client_order_id)
-            else:
-                order = self.sync_get_order_model(order_id=order_id)
+            logger.error(f"[!] Error cancelling the order, {e} code {e.code} symbol {symbol} id {order_id}")
+            order = self.sync_get_order_model(order_id=order_id)
             if not order:
                 return {'error': True, 'message': 'Order model not found'}
 
@@ -338,7 +348,7 @@ class BinanceTrader(Trader):
                 if _order['side'] == 'BUY':
                     trade_model_params = {
                         'exchange': self._exchange,
-                        'buy_order_id': _order['clientOrderId'],
+                        'buy_order_id': _order['orderId'],
                         'buy_status': _order['status'],
                         'buy_quantity_executed': _order['executedQty'],
                         'exchange_account_id': self.account_model_id,
@@ -347,7 +357,7 @@ class BinanceTrader(Trader):
                     self.update_trade(**trade_model_params)
 
                 else:
-                    trade_model = self.get_trade_model(sell_order_id=_order['clientOrderId'])
+                    trade_model = self.get_trade_model(sell_order_id=_order['orderId'])
                     if trade_model:
                         trade_model_params = {
                             'exchange': self._exchange,
@@ -379,7 +389,7 @@ class BinanceTrader(Trader):
         open_sells = [trade for trade in trades if trade.sell_status in ['NEW', 'PARTIALLY_FILLED']]
 
         for trade in open_buys:
-            order = await self.get_order_model(client_order_id=trade.buy_order_id)
+            order = await self.get_order_model(order_id=trade.buy_order_id)
             if not order:
                 await self.update_trade(side='BUY', exchange_account_id=self.account_model_id,
                                       buy_order_id=trade.buy_order_id, health="ERROR",
@@ -401,7 +411,7 @@ class BinanceTrader(Trader):
 
             trade_model_params = {
                 'exchange': self._exchange,
-                'buy_order_id': _order['clientOrderId'],
+                'buy_order_id': _order['orderId'],
                 'buy_status': _order['status'],
                 'buy_quantity_executed': _order['executedQty'],
                 'exchange_account_id': self.account_model_id,
@@ -410,7 +420,7 @@ class BinanceTrader(Trader):
             await self.update_trade(**trade_model_params)
 
         for trade in open_sells:
-            order = await self.get_order_model(client_order_id=trade.sell_order_id)
+            order = await self.get_order_model(order_id=trade.sell_order_id)
             if not order:
                 await self.update_trade(side='SELL', exchange_account_id=self.account_model_id,
                                       buy_order_id=trade.buy_order_id, health="ERROR",
@@ -445,10 +455,11 @@ class BinanceTrader(Trader):
         try:
             payload = msg
             if payload['e'] == "outboundAccountInfo":
+                pass
                 balances_all = payload['B']
                 balances = [{'asset': bal['a'], 'free': bal['f'], 'locked': bal['l']} for bal in balances_all if
                             float(bal['f']) or float(bal['l'])]
-                logger.debug(f"balances : {balances}")
+
                 asset_balances_list = []
                 for balance in balances:
                     balance_model = {
@@ -504,7 +515,7 @@ class BinanceTrader(Trader):
                     trade_model_params = {
                         'exchange': self._exchange,
                         'symbol': trade_params['symbol'],
-                        'buy_order_id': trade_params['client_order_id'],
+                        'buy_order_id': trade_params['orderId'],
                         'buy_status': trade_params['status'],
                         'buy_quantity_executed': trade_params['cummulative_filled_quantity'],
                         'exchange_account_id' : self.account_model_id,
@@ -514,7 +525,7 @@ class BinanceTrader(Trader):
                     trade_model_params = {
                         'exchange': self._exchange,
                         'symbol': trade_params['symbol'],
-                        'sell_order_id': trade_params['client_order_id'],
+                        'sell_order_id': trade_params['orderId'],
                         'sell_status': trade_params['status'],
                         'sell_quantity_executed': trade_params['cummulative_filled_quantity'],
                         'side': 'SELL'
@@ -533,8 +544,8 @@ class BinanceTrader(Trader):
                     trade_model = await self.get_trade_model(sell_order_id=trade_model_params['sell_order_id'])
 
                 if not trade_model:
-                    message = f"{emoji.emojize(':x:', use_aliases=True)}Order: cloid{order_model_params['client_order_id']}{order_model_params['status']}: {order_model_params['side']}ING {float(order_model_params['quantity']):.8f} {order_model_params['symbol']}@ {float(order_model_params['price']):.8f}"
-                    message += "This order is not recognized by the bot. if this is a mistake, report to admin"
+                    message = f"{emoji.emojize(':x:', use_aliases=True)}Order: cloid {order_model_params['client_order_id']} {order_model_params['status']}: {order_model_params['side']}ING {float(order_model_params['quantity']):.8f} {order_model_params['symbol']}@ {float(order_model_params['price']):.8f}"
+                    message += "\nThis order is not recognized by the bot. if this is a mistake, report to admin"
                     logger.info(f"[!] This trade {message} is not from me, id {trade_params['orderId']}, client order id {trade_params['client_order_id']}")
                     await self.send_admin_notification(message)
                     return
@@ -552,10 +563,12 @@ class BinanceTrader(Trader):
                     if trade_params['side'] == "BUY" and trade_params['status'] in ['FILLED']: #we have bought something, lets put up a sell
                         avg_price = float(trade_params['cummulative_quote_asset_transacted']) / float(trade_params['cummulative_filled_quantity'])
                         signal = trade_model.get_signal()
-                        signal_assoc = await sync_to_async(self.get_account_signal_assoc)(
-                            signal_id=signal.id)
-                        if signal_assoc and signal_assoc.profit_target:
-                            sell_price = avg_price * (1 + signal_assoc.profit_target)
+                        if signal:
+                            signal_assoc = await sync_to_async(self.get_account_signal_assoc)(signal_id=signal.id)
+                            if signal_assoc and signal_assoc.profit_target:
+                                sell_price = avg_price * (1 + signal_assoc.profit_target)
+                            else:
+                                sell_price = avg_price * (1 + self.profit_margin)
                         else:
                             sell_price = avg_price * (1 + self.profit_margin)
 
@@ -609,7 +622,7 @@ class BinanceTrader(Trader):
                             self.price_streamer.unsubscribe(trade_model.symbol, trade_model.buy_order_id)
 
                 if trade_params['type'] == "CANCELED": #delete cancelled sells too
-                    order = self.get_order_model(client_order_id=trade_params['client_order_id'])
+                    order = await self.get_order_model(order_id=trade_params['orderId'])
                     if trade_params['side'] == "SELL":
                         logger.warning("[!] You just cancelled a a SELL!")
 
@@ -617,9 +630,9 @@ class BinanceTrader(Trader):
                         if order:
                             #await self.delete_order_model(order.client_order_id)
                             pass
-                        trade = self.get_trade_model(buy_order_id=order.client_order_id)
+                        trade = await self.get_trade_model(buy_order_id=order.orderId)
                         if trade:
-                            #await self.delete_trade_model(trade.buy_order_id)
+                            #await self.update_trade(buy_order_id=trade.buy_order_id)
                             pass
                 if message:
                     await self.send_notification(message)
@@ -696,6 +709,31 @@ class BinanceTrader(Trader):
                     session.add(symbol_model)
             session.commit()
 
+    def get_daily_volume_btc(self, symbol):
+        try:
+            sym_info = self.get_symbol_info(symbol)
+            if not sym_info:
+                return {'error': True, 'message': "Symbol not found"}
+            if not sym_info.dailyVolume or sym_info.dailyVolume_timestamp and datetime.utcnow() - sym_info.dailyVolume_timestamp > timedelta(minutes=5):
+                self.update_symbol_model_volume(symbol)
+                sym_info = self.get_symbol_info(symbol)
+            return {'error': False, 'result': sym_info.dailyVolume}
+        except Exception as e:
+            logger.exception(e)
+            return {'error': True, 'message': str(e)}
+
+    def update_symbol_model_volume(self, symbol):
+        symbol_24hr_ticker = binance.ticker_24hr(symbol)
+        if not symbol_24hr_ticker:
+            return
+        with create_session() as session:
+            symbol_model = session.query(BinanceSymbol).filter_by(name=symbol).first()
+            if symbol_model:
+                    symbol_model.dailyVolume = float(symbol_24hr_ticker['volume']) * get_btc_price(symbol_model.base_asset)
+                    symbol_model.lastPrice_timestamp = datetime.utcnow()
+                    session.add(symbol_model)
+            session.commit()
+
     @run_in_executor
     def get_avg_price(self, symbol):
         try:
@@ -718,10 +756,10 @@ class BinanceTrader(Trader):
             for trade_model in open_trades_models:
                 symbol_info = self.get_symbol_info(trade_model.symbol)
                 if trade_model.buy_status == "NEW" and datetime.utcnow() - trade_model.buy_time > self.parse_time(self.order_timeout):
-                    await self.cancel_order(symbol=trade_model.symbol, client_order_id=trade_model.buy_order_id)
-                    order_model = self.get_order_model(client_order_id=trade_model.buy_order_id)
+                    await self.cancel_order(symbol=trade_model.symbol, order_id=trade_model.buy_order_id)
+                    order_model = await self.get_order_model(order_id=trade_model.buy_order_id)
                     if order_model:
-                        #await self.delete_order_model(client_order_id=trade_model.buy_order_id)
+                        #await self.delete_order_model(order_id=trade_model.buy_order_id)
                         pass
                     #await self.delete_trade_model(buy_order_id=trade_model.buy_order_id)
                     pass
@@ -747,7 +785,7 @@ class BinanceTrader(Trader):
 
                         sell_price = market_price * 0.995
 
-                        resp = await self.cancel_order(trade_model.symbol, client_order_id=trade_model.sell_order_id)
+                        resp = await self.cancel_order(trade_model.symbol, order_id=trade_model.sell_order_id)
                         if resp['error']:
                             logger.error(resp['message'])
                             if 'Unknown order sent' in resp['message']:
@@ -758,7 +796,10 @@ class BinanceTrader(Trader):
                                 admin_message += f"Symbol {trade_model.symbol}, Buy {trade_model.buy_price}, Current Market Price {market_price}"
                                 self.send_admin_notification(admin_message)
 
-                        order_id = f"SELL-LOSS_{trade_model.buy_order_id.split('_')[1]}"
+                        if len(trade_model.buy_order_id.split('_')) == 2:
+                            order_id = f"SELL-LOSS_{trade_model.buy_order_id.split('_')[1][:20]}"
+                        else:
+                            order_id = f"SELL-LOSS_{trade_model.buy_order_id[:20]}"
 
                         await self.orders_queue.put({
                             'symbol': trade_model.symbol,
@@ -770,7 +811,7 @@ class BinanceTrader(Trader):
                             'buy_order_id': trade_model.buy_order_id
                         })
 
-                if trade_model.buy_status == "FILLED" and not trade_model.sell_status in ['NEW', 'FILLED', 'PARTIALLY_FILLED']:
+                if trade_model.buy_status == "FILLED" and not trade_model.sell_status in ['NEW', 'FILLED', 'PARTIALLY_FILLED','CANCELLED']:
                     if not trade_model.buy_price:
                         logger.error(f"[!] Order has no buy price, check if it was a market order")
                         continue
@@ -784,7 +825,10 @@ class BinanceTrader(Trader):
                     else:
                         sell_price = trade_model.buy_price * (1 + self.profit_margin)
 
-                    order_id = f"SELL_{trade_model.buy_order_id.split('_')[1][:23]}"
+                    if len(trade_model.buy_order_id.split('_')) == 2:
+                        order_id = f"SELL_{trade_model.buy_order_id.split('_')[1][:23]}"
+                    else:
+                        order_id = f"SELL_{trade_model.buy_order_id}"
 
                     asset = await self.get_asset_models(asset=trade_model.base_asset)
                     if not asset:
@@ -877,16 +921,18 @@ class BinanceTrader(Trader):
         trade_model = await self.get_trade_model(buy_order_id=buy_order_id)
         if not trade_model:
             print(f"[!] The trade model {buy_order_id} cannot be found")
-            await self.price_streamer.unsubscribe(params['symbol'], buy_order_id)
+            self.price_streamer.unsubscribe(params['symbol'], buy_order_id)
             return
-        resp = await self.cancel_order(trade_model.symbol, client_order_id=trade_model.sell_order_id)
+        resp = await self.cancel_order(trade_model.symbol, order_id=trade_model.sell_order_id)
 
         if resp['error']:
+            print("!"*100)
+            print("Here is where the error comes in")
             logger.error(resp['message'])
             if 'Unknown order sent' in resp['message']:
-                self.send_notification(
+                await self.send_notification(
                     f"{emoji.emojize(':x:', use_aliases=True)} Trade id {trade_model.id} Order Cloid {trade_model.sell_order_id} SELL {trade_model.sell_quantity} {trade_model.symbol} @ {trade_model.sell_price} cannot be cancelled. Order is unknown to the exchange")
-                await self.delete_order_model(client_order_id=trade_model.sell_order_id)
+                await self.delete_order_model(orderId=trade_model.sell_order_id)
                 await self.update_trade(side='BUY', exchange_account_id=self.account_model_id,
                                         buy_order_id=trade_model.buy_order_id, health="ERROR",
                                         reason="Sell order is not found in exchange, could have been cancelled externally")

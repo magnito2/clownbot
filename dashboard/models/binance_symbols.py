@@ -18,6 +18,8 @@ class BinanceSymbol(db.Model):
     multiplierDown = db.Column(db.Float)
     lastPrice = db.Column(db.Float)
     lastPrice_timestamp = db.Column(db.DateTime)
+    dailyVolume = db.Column(db.Float)
+    dailyVolume_timestamp = db.Column(db.DateTime)
 
     def serialize(self):
         return {

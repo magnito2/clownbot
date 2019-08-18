@@ -33,6 +33,8 @@ class ExchangeAccount(Base):
     assets = relationship('Asset', backref='exchange_account', lazy=True)
     max_drawdown = Column(Float) #maximum coin to be used in trades per time. defaults to 50%
     max_orders_per_pair = Column(Integer) #maximum orders to be placed per pair
+    btc_volume_increase_order_above = Column(Float) #if symbol daily volume is above this, order size will be increased by percent below
+    percent_increase_of_order_size = Column(Float)
 
     signal_percent_size = None
     profit_target = None

@@ -297,10 +297,6 @@ def ticker_24hr(symbol):
 
     ticker = _geturl_json(_URLS["ticker_24hr"], {"symbol": symbol})
 
-    for key in ticker:
-        if isinstance(ticker[key], str):
-            ticker[key] = Decimal(ticker[key])
-
     return ticker
 
 
@@ -498,17 +494,18 @@ class Streamer:
                         data = json.loads(data)
                         del self.__pending_reads[id]
 
-                        symbol = data["s"]
-                        if id.find("depth") == 0:
-                            self.__update_order_book(symbol, data)
-                        elif id.find("kline") == 0:
-                            if self.__candlesticks[symbol] == None:
-                                self.__candlesticks[symbol] = []
-                            self.__candlesticks[symbol].append(data["k"])
-                        elif id.find("trades") == 0:
-                            if self.__trades[symbol] == None:
-                                self.__trades[symbol] = []
-                            self.__trades[symbol].append(data)
+                        if data['e'] not in ['outboundAccountPosition', 'outboundAccountInfo']:
+                            symbol = data["s"]
+                            if id.find("depth") == 0:
+                                self.__update_order_book(symbol, data)
+                            elif id.find("kline") == 0:
+                                if self.__candlesticks[symbol] == None:
+                                    self.__candlesticks[symbol] = []
+                                self.__candlesticks[symbol].append(data["k"])
+                            elif id.find("trades") == 0:
+                                if self.__trades[symbol] == None:
+                                    self.__trades[symbol] = []
+                                self.__trades[symbol].append(data)
 
                         await callback(data)
                         await(asyncio.sleep(.1))

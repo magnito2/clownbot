@@ -25,6 +25,9 @@ class ExchangeAccount(db.Model):
     valid_keys = db.Column(db.Boolean)
     max_drawdown = db.Column(db.Float)  # maximum coin to be used in trades per time. defaults to 50%
     max_orders_per_pair = db.Column(db.Integer)  # maximum orders to be placed per pair
+    btc_volume_increase_order_above = db.Column(
+        db.Float)  # if symbol daily volume is above this, order size will be increased by percent below
+    percent_increase_of_order_size = db.Column(db.Float)
 
     def serialize(self):
         return {

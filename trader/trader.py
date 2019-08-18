@@ -10,6 +10,8 @@ from utils.sync import async_to_sync, sync_to_async
 import os,sys,psutil
 import emoji
 
+from trader.binance_portfolio import get_btc_price
+
 logger = logging.getLogger('clone.trader')
 logger.setLevel(logging.INFO)
 
@@ -58,6 +60,9 @@ class Trader:
         self.username = kwargs.get('username')
         self.max_orders_per_symbol = kwargs.get('max_orders_per_symbol', 2)
 
+        self.btc_volume_increase_order_above = kwargs.get('btc_volume_increase_order_above', 0)
+        self.percent_increase_of_order_size = kwargs.get('percent_increase_of_order_size', 0)
+
     async def run(self):
         '''
         The main loop, see if this can be removed
@@ -94,11 +99,7 @@ class Trader:
                         '''
                         Allow for overiding default params with user specified params for signal
                         '''
-                        account_signal_assoc = await sync_to_async(self.get_account_signal_assoc)(signal_name=order_params.get('signal_name'))
-                        if account_signal_assoc:
-                            order_params['signal_overides'] = {
-                                'profit_target': account_signal_assoc.profit_target,
-                            }
+
                         resp = await self.create_order(**order_params)
                         if resp['error']:
                             logger.error(resp['message'])
@@ -115,11 +116,13 @@ class Trader:
                         print("*"*100)
                         print(result)
                         if result['side'] == "BUY":
-
-                            signal_assoc = await sync_to_async(self.get_account_signal_assoc)(
-                                signal_id=trade_model.signal.id)
-                            if signal_assoc and signal_assoc.profit_target:
-                                sell_price = trade_model.buy_price * (1 + signal_assoc.profit_target)
+                            signal = trade_model.get_signal()
+                            if signal:
+                                signal_assoc = await sync_to_async(self.get_account_signal_assoc)(signal_id=signal.id)
+                                if signal_assoc and signal_assoc.profit_target:
+                                    sell_price = trade_model.buy_price * (1 + signal_assoc.profit_target)
+                                else:
+                                    sell_price = trade_model.buy_price * (1 + self.profit_margin)
                             else:
                                 sell_price = trade_model.buy_price * (1 + self.profit_margin)
 
@@ -129,11 +132,11 @@ class Trader:
                                                      f"Stop loss trigger price: {float(result['buy_price']) * (1 - self.stop_loss_trigger):.8f}\n"
                                                      f"Signal: {resp['additional_info']['signal']}")
                         elif result['side'] == "SELL":
-                            if "SELL_" in trade_model.sell_order_id:
+                            if float(trade_model.sell_price) > float(trade_model.buy_price):
                                 await self.send_notification(f"{emoji.emojize(':white_check_mark:', use_aliases=True)}Now Selling\n {emoji.emojize(':id:', use_aliases=True)}: #{trade_model.id}\n"
                                                          f"Symbol: {trade_model.symbol}\n Buy price: {float(trade_model.buy_price):.8f}\n Sell price: {float(trade_model.sell_price):.8f}\n"
                                                          f"Quantity: {float(trade_model.sell_quantity):.8f}")
-                            elif "SELL-LOSS_" in trade_model.sell_order_id:
+                            else:
                                 await self.send_notification(
                                     f"{emoji.emojize(':red_circle:', use_aliases=True)}Stop loss, Selling\n {emoji.emojize(':id:', use_aliases=True)}: #{trade_model.id}\n"
                                     f"Symbol: {trade_model.symbol}\n Buy price: {float(trade_model.buy_price):.8f}\n Sell price: {float(trade_model.sell_price):.8f}\n"
@@ -226,23 +229,20 @@ class Trader:
         return self._update_order_model(**kwargs)
 
     def _update_order_model(self, **kwargs):
-        client_order_id = kwargs.get('client_order_id')
+
         order_id = kwargs.get('order_id')
-        if not client_order_id:
+        if not order_id:
             return False
         with create_session() as session:
             account_model = session.query(ExchangeAccount).filter_by(id=self.account_model_id).first()
 
-            order = session.query(Order).filter_by(exchange=self._exchange).filter_by(client_order_id=client_order_id).first()
-            if not order:
-                order = session.query(Order).filter_by(exchange=self._exchange).filter_by(order_id=order_id).first()
+            order = session.query(Order).filter_by(exchange=self._exchange).filter_by(order_id=order_id).first()
             if order:
-                session.query(Order).filter_by(exchange=self._exchange).filter_by(client_order_id=client_order_id).update(kwargs)
+                session.query(Order).filter_by(exchange=self._exchange).filter_by(order_id=order_id).update(kwargs)
             else:
                 order = Order(**kwargs)
                 account_model.orders.append(order)
             session.commit()
-
 
     @run_in_executor
     def get_order_model(self, client_order_id=None, order_id=None):
@@ -272,9 +272,9 @@ class Trader:
                 return []
 
     @run_in_executor
-    def delete_order_model(self, client_order_id):
+    def delete_order_model(self, order_id):
         with create_session() as session:
-            order = session.query(Order).filter_by(exchange=self._exchange).filter_by(client_order_id=client_order_id).first()
+            order = session.query(Order).filter_by(exchange=self._exchange).filter_by(order_id=order_id).first()
             if order:
                 session.delete(order)
                 session.commit()
@@ -454,34 +454,11 @@ class Trader:
             assets = await self.get_asset_models()
             portfolio = 0
             for asset in assets:
-                reverse_flag = False
-                if asset.name == "BTC":
-                    portfolio += (float(asset.free) + float(asset.locked))
-                else:
                     if self._exchange ==  "BITTREX":
-                        symbol = f"BTC-{asset.name}"
+                        pass
                     elif self._exchange == "BINANCE":
-                        symbol = f"{asset.name}BTC"
-                        sym_model = self.get_symbol_info(symbol)
-                        if not sym_model:
-                            symbol = f"BTC{asset.name}"
-                            sym_model = self.get_symbol_info(symbol)
-                            if not sym_model:
-                                logger.error(f"The asset is not paired up with bitcoin, 2 stage conversion is not yet implemented")
-                                continue
-                            reverse_flag = True
-                    else:
-                        logger.error(f"Unknown Exchange {self._exchange}")
-                        continue
-                    price_resp = await self.get_last_price(symbol)
-                    if price_resp['error']:
-                        logger.error(f"[!] Couldnt get price of {symbol}, reason: {price_resp['message']}")
-                        continue
-                    price = float(price_resp['result'])
-                    if not reverse_flag:
+                        price = get_btc_price(asset.name)
                         portfolio += (float(asset.free) + float(asset.locked)) * price
-                    else:
-                        portfolio += (float(asset.free) + float(asset.locked))/price
 
             logger.info(f"Total portfolio is {portfolio}")
             await self.update_portfolio_model(portfolio)
