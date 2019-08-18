@@ -458,6 +458,9 @@ class Trader:
                         pass
                     elif self._exchange == "BINANCE":
                         price = get_btc_price(asset.name)
+                        if not price:
+                            logger.error(f"Could not get price of {asset.name}")
+                            continue
                         portfolio += (float(asset.free) + float(asset.locked)) * price
 
             logger.info(f"Total portfolio is {portfolio}")
