@@ -48,4 +48,4 @@ async def main():
     await celebro_instance.run()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main(), debug=True)
