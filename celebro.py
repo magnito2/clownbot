@@ -53,7 +53,8 @@ class Celebro:
                         'price_streamer': self.binance_price_streamer,
                         'username': account.user.username,
                         'max_orders_per_symbol': account.max_orders_per_pair,
-                        'max_drawdown': account.max_drawdown
+                        'max_drawdown': account.max_drawdown,
+                        'sell_only_mode': account.sell_only_mode
                     }
                     valid = self.validate_account_model_params(kwargs)
                     if not valid:
@@ -81,7 +82,8 @@ class Celebro:
                         'exchange_account_model_id': account.id,
                         'username': account.user.username,
                         'max_orders_per_symbol': account.max_orders_per_pair,
-                        'max_drawdown': account.max_drawdown
+                        'max_drawdown': account.max_drawdown,
+                        'sell_only_mode': account.sell_only_mode
                     }
 
                     valid = self.validate_account_model_params(kwargs)
