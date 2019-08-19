@@ -178,8 +178,11 @@ class BittrexTrader(Trader):
                 logger.debug(f"[+] Symbol {symbol} has open orders.")
                 order_list = [order for order in orders if order['OrderType'] == f"LIMIT_{side}"]
                 logger.info(f"[!] Cancelling orders {[order['OrderUuid'] for order in order_list]}")
-                for order in order_list:
-                    self.cancel_order(symbol, order['OrderUuid'])
+                #for order in order_list:
+                #    self.cancel_order(symbol, order['OrderUuid'])
+                if len(order_list) > self.max_orders_per_symbol:
+                    logger.info(f"[!] Symbol {symbol} has {len(order_list)} {side} orders open. Not placing another")
+                    return {'error': True, 'message': f"Symbol {symbol} has {len(order_list)} {side} orders open. Not placing another"}
 
         if side == "BUY":
             resp = self.account.buy_limit(market=symbol, quantity=quantity, rate=f"{price:.8f}")

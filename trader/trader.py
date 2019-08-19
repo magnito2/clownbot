@@ -13,7 +13,7 @@ import emoji
 from trader.binance_portfolio import get_btc_price
 
 logger = logging.getLogger('clone.trader')
-logger.setLevel(logging.INFO)
+#logger.setLevel(logging.)
 
 class Trader:
     '''
@@ -113,6 +113,7 @@ class Trader:
                         trade_model = await self.get_trade_model(buy_order_id=result['buy_order_id'])
                         if not trade_model:
                             logger.error(f"[+] Could not find trade model of id {result['buy_order_id']}")
+                            continue
                         print("*"*100)
                         print(result)
                         if result['side'] == "BUY":

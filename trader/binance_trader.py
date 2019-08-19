@@ -546,6 +546,7 @@ class BinanceTrader(Trader):
                 if not trade_model:
                     message = f"{emoji.emojize(':x:', use_aliases=True)}Order: cloid {order_model_params['client_order_id']} {order_model_params['status']}: {order_model_params['side']}ING {float(order_model_params['quantity']):.8f} {order_model_params['symbol']}@ {float(order_model_params['price']):.8f}"
                     message += "\nThis order is not recognized by the bot. if this is a mistake, report to admin"
+                    message += f"\nOrder id {trade_params['orderId']}"
                     logger.info(f"[!] This trade {message} is not from me, id {trade_params['orderId']}, client order id {trade_params['client_order_id']}")
                     await self.send_admin_notification(message)
                     return
