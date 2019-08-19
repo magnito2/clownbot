@@ -18,6 +18,7 @@ parser.add_argument('fixed_amount_per_order')
 parser.add_argument('use_fixed_amount_per_order')
 parser.add_argument('btc_volume_increase_order_above')
 parser.add_argument('percent_increase_of_order_size')
+parser.add_argument('sell_only_mode')
 
 class ExchangeSettings(Resource):
 
@@ -49,6 +50,7 @@ class ExchangeSettings(Resource):
         use_fixed_amount_per_order = args.get('use_fixed_amount_per_order')
         btc_volume_increase_order_above = args.get('btc_volume_increase_order_above')
         percent_increase_of_order_size = args.get('percent_increase_of_order_size')
+        sell_only_mode = args.get('sell_only_mode')
 
         has_error = False
         response = ''
@@ -81,7 +83,9 @@ class ExchangeSettings(Resource):
             if btc_volume_increase_order_above:
                 exchange_account.btc_volume_increase_order_above = btc_volume_increase_order_above
             if percent_increase_of_order_size:
-                exchange_account.percent_increase_of_order_size = percent_increase_of_order_size
+                exchange_account.percent_increase_of_order_size = float(percent_increase_of_order_size)/100
+            if sell_only_mode in ['True', 'False']:
+                exchange_account.sell_only_mode = True if sell_only_mode == "True" else False
 
             db.session.commit()
 

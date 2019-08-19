@@ -21,6 +21,7 @@ class SettingsForm extends Component{
             fixed_amount_per_order : '',
             btc_volume_increase_order_above : '',
             percent_increase_of_order_size : '',
+            sell_only_mode: '',
             loading: false
         };
         this.handleSubmit = this.handleSubmit.bind(this);
@@ -47,7 +48,8 @@ class SettingsForm extends Component{
             exchange, api_key, api_secret,
             profit_margin, stop_loss_trigger, order_cancel_seconds,
             min_order_size, account_exists, user_tg_id, receive_notifications,
-            use_fixed_amount_per_order, fixed_amount_per_order, btc_volume_increase_order_above, percent_increase_of_order_size
+            use_fixed_amount_per_order, fixed_amount_per_order, btc_volume_increase_order_above,
+            percent_increase_of_order_size, sell_only_mode
         } = this.state;
         const { dispatch } = this.props;
         if (exchange && api_key && api_secret && !account_exists) {
@@ -59,7 +61,7 @@ class SettingsForm extends Component{
                 dispatch(settingsActions.create({
                     exchange, profit_margin, stop_loss_trigger, order_cancel_seconds, min_order_size, user_tg_id, receive_notifications,
                     use_fixed_amount_per_order, fixed_amount_per_order, api_secret, api_key, btc_volume_increase_order_above,
-                    percent_increase_of_order_size
+                    percent_increase_of_order_size, sell_only_mode
                 }));
             }
         }
@@ -115,6 +117,9 @@ class SettingsForm extends Component{
             if (exchange_settings.percent_increase_of_order_size !== this.state.percent_increase_of_order_size) {
                 this.setState({ percent_increase_of_order_size: exchange_settings.percent_increase_of_order_size });
             }
+            if (exchange_settings.sell_only_mode != this.state.sell_only_mode){
+                this.setState({ sell_only_mode : exchange_settings.sell_only_mode});
+            }
         }
     }
 
@@ -141,6 +146,7 @@ class SettingsForm extends Component{
                 return true;
             }
         }
+        return true;
     }
 
     render(){
@@ -148,7 +154,7 @@ class SettingsForm extends Component{
             api_key, api_secret, exchange, profit_margin, stop_loss_trigger,
             order_cancel_seconds, min_order_size, submitted, account_exists,
             user_tg_id, receive_notifications, use_fixed_amount_per_order, fixed_amount_per_order,
-            btc_volume_increase_order_above, percent_increase_of_order_size
+            btc_volume_increase_order_above, percent_increase_of_order_size, sell_only_mode
         } = this.state;
 
         return (
@@ -284,6 +290,17 @@ class SettingsForm extends Component{
                                 />
                             </div>
                         </div>}
+                        <div className="form-group">
+                            <div className="form-check">
+                                <div class="checkbox">
+                                    <label for="checkbox333" class="form-check-label ">
+                                        <input type="checkbox" id='checkbox333'
+                                               name="sell_only_mode" checked={sell_only_mode}
+                                               class="form-check-input" onChange={this.handleChange}/>Sell Only Mode
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 }

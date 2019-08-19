@@ -35,6 +35,7 @@ class ExchangeAccount(Base):
     max_orders_per_pair = Column(Integer) #maximum orders to be placed per pair
     btc_volume_increase_order_above = Column(Float) #if symbol daily volume is above this, order size will be increased by percent below
     percent_increase_of_order_size = Column(Float)
+    sell_only_mode = Column(Boolean)
 
     signal_percent_size = None
     profit_target = None

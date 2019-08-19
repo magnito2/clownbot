@@ -28,6 +28,7 @@ class ExchangeAccount(db.Model):
     btc_volume_increase_order_above = db.Column(
         db.Float)  # if symbol daily volume is above this, order size will be increased by percent below
     percent_increase_of_order_size = db.Column(db.Float)
+    sell_only_mode = db.Column(db.Boolean)
 
     def serialize(self):
         return {

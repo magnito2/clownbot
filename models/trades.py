@@ -52,4 +52,4 @@ class Trade(Base):
             return session.query(Trade).filter_by(id=self.id).first().signal
 
     def __repr__(self):
-        return f"<Order({self.id}, BOID {self.buy_order_id}, SOID {self.sell_order_id}, BP {self.buy_price}, SP {self.sell_price}, BQ {self.buy_quantity})"
+        return f"<Trade({self.id}, BOID {self.buy_order_id}, SOID {self.sell_order_id}, BP {self.buy_price}, SP {self.sell_price}, BQ {self.buy_quantity})>"

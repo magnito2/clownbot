@@ -63,6 +63,8 @@ class Trader:
         self.btc_volume_increase_order_above = kwargs.get('btc_volume_increase_order_above', 0)
         self.percent_increase_of_order_size = kwargs.get('percent_increase_of_order_size', 0)
 
+        self.sell_only_mode = True #kwargs.get('sell_only_mode', False)
+
     async def run(self):
         '''
         The main loop, see if this can be removed
@@ -94,6 +96,10 @@ class Trader:
                         logger.debug(f"[*] {self._exchange} You have not subscribed to {order_params['signal_name']}")
                         continue
                     if order_params['exchange'] == self._exchange:
+                        if order_params['side'] == 'BUY' and self.sell_only_mode:
+                            logger.info(f"Bot is in sell only model, not placing order {order_params}")
+                            continue
+
                         logger.debug(f'[+] __ New__Order__Being__Created')
 
                         '''
