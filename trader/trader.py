@@ -58,12 +58,12 @@ class Trader:
             self.percent_size = float(kwargs.get('percent_size')) / 100
 
         self.username = kwargs.get('username')
-        self.max_orders_per_symbol = kwargs.get('max_orders_per_symbol', 2)
+        self.max_orders_per_symbol = kwargs.get('max_orders_per_symbol') if kwargs.get('max_orders_per_symbol') else 2
 
-        self.btc_volume_increase_order_above = kwargs.get('btc_volume_increase_order_above', 0)
-        self.percent_increase_of_order_size = kwargs.get('percent_increase_of_order_size', 0)
+        self.btc_volume_increase_order_above = kwargs.get('btc_volume_increase_order_above') if kwargs.get('btc_volume_increase_order_above') else 0
+        self.percent_increase_of_order_size = kwargs.get('percent_increase_of_order_size') if kwargs.get('percent_increase_of_order_size') else 0
 
-        self.sell_only_mode = True #kwargs.get('sell_only_mode', False)
+        self.sell_only_mode = kwargs.get('sell_only_mode', False)
 
     async def run(self):
         '''
@@ -403,7 +403,6 @@ class Trader:
             if not side:
                 logger.error('Must provide a side')
                 return
-
             del kwargs['side']
 
             if side == 'BUY':

@@ -58,7 +58,7 @@ class BinanceSocketManager:
             return
         for sub in self.__subscription[symbol]:
             if close_price <= sub['stop_price']:
-                print(f"[!] Stop loss hit, {symbol}, stop_price {sub['stop_price']}, current price {close_price}")
+                logger.info(f"[!] Stop loss hit, {symbol}, stop_price {sub['stop_price']}, current price {close_price}")
                 try:
                     params = {
                         'symbol': msg['s'],
