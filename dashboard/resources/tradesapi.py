@@ -31,7 +31,7 @@ class TradesAPI(Resource):
             abort(401, message=f"No user found for email {email}")
         if exchange_account_id:
             exchange_account = ExchangeAccount.query.get(exchange_account_id)
-            if exchange_account:
+            if exchange_account and exchange_account in user.exchange_accounts:
                 trades = exchange_account.trades
                 trades_resp = [trade.serialize() for trade in trades if trade.buy_status != 'CANCELED']
                 return trades_resp

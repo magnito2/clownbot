@@ -6,6 +6,7 @@ from .signalsapi import SignalsAPI, CheckedSignalsAPI
 from .portfolioapi import PortfolioAPI, BTCValuesAPI
 from .manual_orders_api import ManualOrdersAPI, ExchangeSymbolsAPI
 from .tradesapi import TradesAPI
+from .assetsapi import AssetsApi
 
 api.add_resource(UserRegistration, '/api/registration')
 api.add_resource(UserLogin, '/api/login')
@@ -25,6 +26,7 @@ api.add_resource(ManualOrdersAPI, '/api/manualorders')
 api.add_resource(ExchangeSymbolsAPI, '/api/exchangesymbols')
 
 api.add_resource(TradesAPI, '/api/trades/')
+api.add_resource(AssetsApi, '/api/assets/')
 
 api.add_resource(SendPasswordResetEmail, '/api/password-reset-email')
 api.add_resource(ResetPassword, '/api/reset-password')

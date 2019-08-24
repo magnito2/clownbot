@@ -48,7 +48,8 @@ class ExchangeAccount(db.Model):
             'portfolio_uri': f'/api/portfolio?exchange_account_id={self.id}',
             'valid_keys': self.valid_keys,
             'max_drawdown': self.max_drawdown,
-            'max_orders_per_pair': self.max_orders_per_pair
+            'max_orders_per_pair': self.max_orders_per_pair,
+            'sell_only_mode': self.sell_only_mode
         }
 
     def __repr__(self):

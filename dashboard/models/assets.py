@@ -16,9 +16,10 @@ class Asset(db.Model):
     def serialize(self):
         return {
             'name': self.name,
+            'exchange': self.exchange,
             'free' : self.free,
             'locked': self.locked,
-            'timestamp': self.timestamp
+            'timestamp': self.timestamp.isoformat()
         }
 
     def __repr__(self):
