@@ -277,12 +277,10 @@ def ticker_order_books():
     book_tickers = {}
     for coin in coins:
         book_tickers[coin["symbol"]] = {
-            OrderBookTicker(
-                Decimal(coin["bidPrice"]),
-                Decimal(coin["bidQty"]),
-                Decimal(coin["askPrice"]),
-                Decimal(coin["askQty"])
-            )
+            'bid_price': float(coin["bidPrice"]),
+            'bid_qty': float(coin["bidQty"]),
+            'ask_price': float(coin["askPrice"]),
+            'ask_qty': float(coin["askQty"])
         }
 
     return book_tickers
@@ -322,7 +320,7 @@ class Account:
 
         self.__recv_window = window_millis
 
-    def new_order(self, symbol, side, type, quantity, price=0, new_client_order_id=None, stop_price=None, iceberg_qty=None):
+    def new_order(self, symbol, side, type, quantity, price=0, new_client_order_id=None, stop_price=None, iceberg_qty=None, time_in_force="GTC"):
         """ Submit a new order
         :param symbol: the market symbol (ie: BNBBTC)
         :param side: "BUY" or "SELL"
@@ -339,7 +337,7 @@ class Account:
             "symbol": symbol,
             "side": side,
             "type": type,
-            "timeInForce": "GTC",
+            "timeInForce": time_in_force,
             "quantity": quantity,
             "price": price,
             "newClientOrderId": new_client_order_id,
