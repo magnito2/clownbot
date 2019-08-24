@@ -54,7 +54,11 @@ class Celebro:
                         'username': account.user.username,
                         'max_orders_per_symbol': account.max_orders_per_pair,
                         'max_drawdown': account.max_drawdown,
-                        'sell_only_mode': account.sell_only_mode
+                        'sell_only_mode': account.sell_only_mode,
+                        'btc_volume_increase_order_above': float(
+                            account.btc_volume_increase_order_above) if account.btc_volume_increase_order_above else 0,
+                        'percent_increase_of_order_size': float(
+                            account.percent_increase_of_order_size) if account.percent_increase_of_order_size else 0
                     }
                     valid = self.validate_account_model_params(kwargs)
                     if not valid:
@@ -83,7 +87,11 @@ class Celebro:
                         'username': account.user.username,
                         'max_orders_per_symbol': account.max_orders_per_pair,
                         'max_drawdown': account.max_drawdown,
-                        'sell_only_mode': account.sell_only_mode
+                        'sell_only_mode': account.sell_only_mode,
+                        'btc_volume_increase_order_above': float(
+                            account.btc_volume_increase_order_above) if account.btc_volume_increase_order_above else 0,
+                        'percent_increase_of_order_size': float(
+                            account.percent_increase_of_order_size) if account.percent_increase_of_order_size else 0
                     }
 
                     valid = self.validate_account_model_params(kwargs)
@@ -156,22 +164,29 @@ class Celebro:
 
             if account.exchange == "BINANCE":
                 kwargs = {
-                    'api_key': account.api_key,
-                    'api_secret': account.api_secret,
-                    'percent_size': account.min_order_size,
-                    'profit_margin': account.profit_margin,
-                    'order_timeout': account.order_cancel_seconds,
-                    'stop_loss_trigger': account.stop_loss_trigger,
-                    'user_id': account.user_id,
-                    'user_tg_id': account.user_tg_id,
-                    'receive_notifications': account.receive_notifications,
-                    'subscribed_signals': [signal.name for signal in account.signals],
-                    'use_fixed_amount_per_order': account.use_fixed_amount_per_order,
-                    'fixed_amount_per_order': account.fixed_amount_per_order,
-                    'exchange_account_model_id': account.id,
-                    'btc_volume_increase_order_above': account.btc_volume_increase_order_above,
-                    'percent_increase_of_order_size': account.percent_increase_of_order_size
-                }
+                        'api_key': account.api_key,
+                        'api_secret': account.api_secret,
+                        'percent_size': account.min_order_size,
+                        'profit_margin': account.profit_margin,
+                        'order_timeout': account.order_cancel_seconds,
+                        'stop_loss_trigger': account.stop_loss_trigger,
+                        'user_id': account.user_id,
+                        'user_tg_id': account.user_tg_id,
+                        'receive_notifications': account.receive_notifications,
+                        'subscribed_signals': [signal.name for signal in account.signals],
+                        'use_fixed_amount_per_order': account.use_fixed_amount_per_order,
+                        'fixed_amount_per_order': account.fixed_amount_per_order,
+                        'exchange_account_model_id': account.id,
+                        'price_streamer': self.binance_price_streamer,
+                        'username': account.user.username,
+                        'max_orders_per_symbol': account.max_orders_per_pair,
+                        'max_drawdown': account.max_drawdown,
+                        'sell_only_mode': account.sell_only_mode,
+                        'btc_volume_increase_order_above': float(
+                            account.btc_volume_increase_order_above) if account.btc_volume_increase_order_above else 0,
+                        'percent_increase_of_order_size': float(
+                            account.percent_increase_of_order_size) if account.percent_increase_of_order_size else 0
+                    }
 
                 kwargs['subscribed_signals'].append('ManualOrder')
                 binance_trader = BinanceTrader(**kwargs)
@@ -182,22 +197,28 @@ class Celebro:
 
             elif account.exchange == "BITTREX":
                 kwargs = {
-                    'api_key': account.api_key,
-                    'api_secret': account.api_secret,
-                    'percent_size': account.min_order_size,
-                    'profit_margin': account.profit_margin,
-                    'order_timeout': account.order_cancel_seconds,
-                    'stop_loss_trigger': account.stop_loss_trigger,
-                    'user_id': account.user_id,
-                    'user_tg_id': account.user_tg_id,
-                    'receive_notifications': account.receive_notifications,
-                    'subscribed_signals': [signal.name for signal in account.signals],
-                    'use_fixed_amount_per_order': account.use_fixed_amount_per_order,
-                    'fixed_amount_per_order': account.fixed_amount_per_order,
-                    'exchange_account_model_id': account.id,
-                    'btc_volume_increase_order_above': float(account.btc_volume_increase_order_above) if account.btc_volume_increase_order_above else 0,
-                    'percent_increase_of_order_size': float(account.percent_increase_of_order_size) if account.percent_increase_of_order_size else 0
-                }
+                        'api_key': account.api_key,
+                        'api_secret': account.api_secret,
+                        'percent_size': account.min_order_size,
+                        'profit_margin': account.profit_margin,
+                        'order_timeout': account.order_cancel_seconds,
+                        'stop_loss_trigger': account.stop_loss_trigger,
+                        'user_id': account.user_id,
+                        'user_tg_id': account.user_tg_id,
+                        'receive_notifications': account.receive_notifications,
+                        'subscribed_signals': [signal.name for signal in account.signals],
+                        'use_fixed_amount_per_order': account.use_fixed_amount_per_order,
+                        'fixed_amount_per_order': account.fixed_amount_per_order,
+                        'exchange_account_model_id': account.id,
+                        'username': account.user.username,
+                        'max_orders_per_symbol': account.max_orders_per_pair,
+                        'max_drawdown': account.max_drawdown,
+                        'sell_only_mode': account.sell_only_mode,
+                        'btc_volume_increase_order_above': float(
+                            account.btc_volume_increase_order_above) if account.btc_volume_increase_order_above else 0,
+                        'percent_increase_of_order_size': float(
+                            account.percent_increase_of_order_size) if account.percent_increase_of_order_size else 0
+                    }
 
                 kwargs['subscribed_signals'].append('ManualOrder')
                 bittrex_trader = BittrexTrader(**kwargs)
@@ -232,3 +253,6 @@ class Celebro:
             await self.add_account(account_id)
         except Exception as e:
             logger.exception(e)
+
+    async def subscribe_signal(self, signal):
+        pass
