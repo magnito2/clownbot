@@ -5,3 +5,4 @@ export * from './signals.service';
 export * from './portfolio.service';
 export * from './manualorders.service';
 export * from './traders.services';
+export * from './assets.service';

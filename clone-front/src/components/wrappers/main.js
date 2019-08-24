@@ -62,6 +62,10 @@ class MainWrapper extends Component{
                                 <a href="/manualorders">
                                     <i class="fas fa-bank"></i>Create Order</a>
                             </li>
+                            <li>
+                                <a href="/assets">
+                                    <i class="fas fa-gem"></i>Assets</a>
+                            </li>
                         </ul>
                     </nav>
                 </div>

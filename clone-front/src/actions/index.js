@@ -6,3 +6,4 @@ export * from './signals.action';
 export * from './portfolio.action';
 export * from './manualorders.action';
 export * from './traders.actions';
+export * from './assets.actions';

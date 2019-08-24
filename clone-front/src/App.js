@@ -12,6 +12,7 @@ import {SettingsPage, SignalsPage} from "./components/settings";
 import {LoginPage, RecoverEmailPage, RecoverPage} from "./components/auth";
 import {RegisterPage} from "./components/auth";
 import {ManualOrderForm} from "./components/manualorders";
+import {AssetsPage} from "./components/assets";
 
 class App extends Component {
   render() {
@@ -26,6 +27,7 @@ class App extends Component {
                 <Route path="/register" component={RegisterPage} />
                 <Route path="/reset-password-email" component={RecoverEmailPage} />
                 <Route path="/reset-password/:reset_token" component={RecoverPage} />
+                <Route path="/assets" component={AssetsPage} />
             </div>
         </Router>
     );

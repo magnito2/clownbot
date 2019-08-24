@@ -184,7 +184,7 @@ class SignalsForm extends Component{
                                                                     {checked_signals.includes(signal.name) && <div class="row form-group">
                                                                         <div class="col col-md-7">
                                                                             <div className="input-group">
-                                                                                <div className="input-group-addon">Investment Percent</div>
+                                                                                <div className="input-group-addon">Investment Percent <span class="badge badge-secondary">Optional</span></div>
                                                                                 <input
                                                                                     type="text"
                                                                                     name={signal.name+"-percent_investment"}
@@ -201,7 +201,7 @@ class SignalsForm extends Component{
                                                                         </div>
                                                                         <div class="col col-md-5">
                                                                             <div className="input-group">
-                                                                                <div className="input-group-addon">Profit Target</div>
+                                                                                <div className="input-group-addon">Profit Target <span class="badge badge-secondary">Optional</span></div>
                                                                                 <input
                                                                                     type="text"
                                                                                     name={signal.name+"-profit_target"}
@@ -239,6 +239,7 @@ class SignalsForm extends Component{
                             </div>
                             {this.state.show_info === "percent_investment" && <div className="card-body card-block">
                                 <p className="card-text"><strong>Investment Percent</strong></p>
+                                <p className="card-text">This field is <span class="badge badge-secondary">Optional</span></p>
                                 <p class="card-text">
                                     Maximum amount of investment this signal can hold. Minimum value is 1% and max is 100%. For sources with
                                     high number of signals, use this to limit.
@@ -246,6 +247,7 @@ class SignalsForm extends Component{
                             </div>}
                             {this.state.show_info === "profit_target" && <div className="card-body card-block">
                                 <p className="card-text"><strong>Profit Target</strong></p>
+                                <p className="card-text">This field is <span class="badge badge-secondary">Optional</span></p>
                                 <p class="card-text">
                                     Control the profit target assigned to each signal. Sometimes, you trust one signal more than others. Assign
                                     a bigger profit target if a signal offers stronger signals
