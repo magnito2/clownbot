@@ -407,9 +407,9 @@ class BinanceTrader(Trader):
         for trade in open_sells:
             try:
                 if trade.buy_order_id.isdigit():
-                    _order_resp = await sync_to_async(self.account.query_order)(trade.symbol, order_id=trade.buy_order_id)
+                    _order_resp = await sync_to_async(self.account.query_order)(trade.symbol, order_id=trade.sell_order_id)
                 else:
-                    _order_resp = await sync_to_async(self.account.query_order)(trade.symbol, orig_client_order_id=trade.buy_order_id)
+                    _order_resp = await sync_to_async(self.account.query_order)(trade.symbol, orig_client_order_id=trade.sell_order_id)
 
                 _order = _order_resp
 
@@ -517,7 +517,7 @@ class BinanceTrader(Trader):
                         'exchange_account_id' : self.account_model_id,
                         'side': 'BUY'
                     }
-                else:
+                elif trade_params['side'] == "SELL":
                     trade_model_params = {
                         'exchange': self._exchange,
                         'symbol': trade_params['symbol'],
@@ -526,6 +526,9 @@ class BinanceTrader(Trader):
                         'sell_quantity_executed': trade_params['cummulative_filled_quantity'],
                         'side': 'SELL'
                     }
+                else:
+                    await self.send_admin_notification(f"Cant tell if it is buy or sell, {str(trade_params)}")
+                    return
 
                 message = ""
 
@@ -536,15 +539,18 @@ class BinanceTrader(Trader):
                         await self.update_trade(**trade_model_params)
                         await asyncio.sleep(3)
                     trade_model = await self.get_trade_model(buy_order_id=trade_model_params['buy_order_id'])
-                else: #websocket message arrives before http create_order is complete.. So lets update the trade here.
+                elif trade_params['side'] == 'SELL': #websocket message arrives before http create_order is complete.. So lets update the trade here.
                     trade_model = await self.get_trade_model(sell_order_id=trade_model_params['sell_order_id'])
                     if not trade_model:
                         sell_cloid_split = order_model_params['client_order_id'].split("_", 1)
-                        if len(sell_cloid_split) < 1 and sell_cloid_split[0] in ["SELL","SELL-LOSS"]:
+                        if len(sell_cloid_split) > 1 and sell_cloid_split[0] in ["SELL","SELL-LOSS"]:
                             buy_order_id = sell_cloid_split[1]
                             trade_model = await self.get_trade_model(buy_order_id=buy_order_id)
                             if trade_model:
                                 trade_model_params['buy_order_id'] = buy_order_id
+                else:
+                    logger.error("We should not get here")
+                    return
 
                 if not trade_model and "BUY_" not in order_model_params['client_order_id'] and "SELL" not in order_model_params['client_order_id']:
                     message = f"{emoji.emojize(':x:', use_aliases=True)}Order: cloid {order_model_params['client_order_id']} {order_model_params['status']}: {order_model_params['side']}ING {float(order_model_params['quantity']):.8f} {order_model_params['symbol']}@ {float(order_model_params['price']):.8f}"
@@ -824,11 +830,15 @@ class BinanceTrader(Trader):
 
                     asset = await self.get_asset_models(asset=trade_model.base_asset)
                     if not asset or float(asset.free) < float(symbol_info.min_qty):
-                        await self.update_trade(side='BUY', exchange_account_id=self.account_model_id,
+                        await self.http_update_asset_balances()
+                        asyncio.sleep(10)
+                        asset = await self.get_asset_models(asset=trade_model.base_asset)
+                        if not asset or float(asset.free) < float(symbol_info.min_qty):
+                            await self.update_trade(side='BUY', exchange_account_id=self.account_model_id,
                                                 buy_order_id=trade_model.buy_order_id, health="ERROR",
                                                 sell_status='ERRORED',
                                                 reason="The base asset is missing or depleted")
-                        continue
+                            continue
 
                     signal = trade_model.get_signal()
                     if signal:
@@ -1076,3 +1086,37 @@ class BinanceTrader(Trader):
                         del self.scrapper_orders[order_key]
                     if order['buy_status'] == "NEW" and datetime.utcnow() - order['order_time'] > timedelta(minutes=2):
                         resp = await self.cancel_order(order['symbol'], order_id=order['buy_order_id'])
+
+    async def update_trade_status(self):
+        '''
+        Trades misbehave, from reporting error when they should not, to reporting filled when they should not
+        :return:
+        '''
+        trades = await self.get_trade_models()
+        for trade in trades:
+            if not trade.sell_order_id:
+                print(f"Trade #{trade.id} has not sold")
+                continue
+            #check trade sell status matches sell order status, or else update
+            sell_order = await self.get_order_model(order_id=trade.sell_order_id)
+            if not sell_order:
+                print(f"Sell order {trade.sell_order_id} not found")
+                continue
+            if not trade.sell_order_id == None:
+                if trade.sell_status == sell_order.status:
+                    print(f"Trade {trade.id}, Thumbs up emoji")
+                else:
+                    print(f"Trade #{trade.id} error, sell status {sell_order.status}, model status {trade.sell_status}")
+                    trade_model_params = {
+                        'exchange': self._exchange,
+                        'symbol': sell_order.symbol,
+                        'sell_order_id': sell_order.order_id,
+                        'sell_status': sell_order.status,
+                        'sell_quantity_executed': sell_order.cummulative_filled_quantity,
+                        'side': 'SELL',
+                        'buy_order_id': trade.buy_order_id
+                    }
+                    await self.update_trade(**trade_model_params)
+
+            else:
+                print(f"Trade #{trade.id} had not sold, buy status {trade.buy_status}")
