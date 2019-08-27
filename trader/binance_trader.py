@@ -831,7 +831,7 @@ class BinanceTrader(Trader):
                     asset = await self.get_asset_models(asset=trade_model.base_asset)
                     if not asset or float(asset.free) < float(symbol_info.min_qty):
                         await self.http_update_asset_balances()
-                        asyncio.sleep(10)
+                        await asyncio.sleep(10)
                         asset = await self.get_asset_models(asset=trade_model.base_asset)
                         if not asset or float(asset.free) < float(symbol_info.min_qty):
                             await self.update_trade(side='BUY', exchange_account_id=self.account_model_id,

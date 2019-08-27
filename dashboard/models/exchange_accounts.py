@@ -49,7 +49,9 @@ class ExchangeAccount(db.Model):
             'valid_keys': self.valid_keys,
             'max_drawdown': self.max_drawdown,
             'max_orders_per_pair': self.max_orders_per_pair,
-            'sell_only_mode': self.sell_only_mode
+            'sell_only_mode': self.sell_only_mode,
+            'btc_volume_increase_order_above': self.btc_volume_increase_order_above,
+            'percent_increase_of_order_size': self.percent_increase_of_order_size
         }
 
     def __repr__(self):
