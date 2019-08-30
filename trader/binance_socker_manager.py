@@ -66,5 +66,6 @@ class BinanceSocketManager:
                         'buy_order_id' : sub['buy_order_id']
                     }
                     asyncio.create_task(sub['bot'].create_stop_loss_order(params))
+                    self.unsubscribe(symbol, sub['buy_order_id'])
                 except Exception as e:
                     logger.error(e)

@@ -260,6 +260,12 @@ class BinanceTrader(Trader):
 
     async def http_update_asset_balances(self):
         try:
+            if hasattr(self, "last_assets_update"):
+                last_update = self.last_assets_update
+            else:
+                last_update = datetime.fromtimestamp(0)
+            if not datetime.now() - last_update > timedelta(minutes=1):
+                return
             balances_resp = await self.get_asset_balances()
             if balances_resp['error']:
                 logger.error(f"[+] Error getting balances, {balances_resp['message']}")
@@ -275,10 +281,13 @@ class BinanceTrader(Trader):
                     'locked': balance['locked']
                 })
             await self.update_asset_balances(bal_list)
+            self.last_assets_update = datetime.now()
+
         except binance.BinanceError as e:
             if e.code in [-2014, -2015]:
+                logger.error(f"{e}")
                 await self.invalidate_keys()
-                self.keep_running = False
+                #self.keep_running = False
                 return
         except Exception as e:
             logger.exception(e)
@@ -934,10 +943,13 @@ class BinanceTrader(Trader):
     async def create_stop_loss_order(self, params):
         logger.info(f"Stop loss attempted {params}")
         buy_order_id = params['buy_order_id']
+        self.price_streamer.unsubscribe(params['symbol'], buy_order_id)
         trade_model = await self.get_trade_model(buy_order_id=buy_order_id)
         if not trade_model:
             print(f"[!] The trade model {buy_order_id} cannot be found")
-            self.price_streamer.unsubscribe(params['symbol'], buy_order_id)
+            return
+        if trade_model.health == "ERROR":
+            logger.error("f Stop loss placed on a trade in error, #{trade_model}")
             return
         if trade_model.sell_status in ["NEW","PARTIALLY_FILLED"]:
             resp = await self.cancel_order(trade_model.symbol, order_id=trade_model.sell_order_id)
@@ -954,9 +966,12 @@ class BinanceTrader(Trader):
                                             buy_order_id=trade_model.buy_order_id, health="ERROR",
                                             reason="Sell order is not found in exchange, could have been cancelled externally")
             else:
-
+                if trade_model.health == "ERROR":
+                    logger.error("f Stop loss placed on a trade in error, #{trade_model}")
+                    return
                 sell_price = float(params['price']) * 0.995
                 order_id = f"SELL-LOSS_{trade_model.buy_order_id[:20]}"
+                logger.info(f"Adding stop loss {trade_model} into orders queue")
                 await self.orders_queue.put({
                     'symbol': trade_model.symbol,
                     'exchange': 'BINANCE',

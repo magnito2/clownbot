@@ -29,7 +29,7 @@ class Trader:
 
     def __init__(self, **kwargs):
         self._exchange = '' #use this to separate binance from bittrex, create separate for each
-        self.orders_queue = asyncio.Queue()
+        self.orders_queue = asyncio.Queue(maxsize=10)
         self.percent_size = None
         self.btc_per_order = None
         self.profit_margin = kwargs.get('profit_margin') / 100
@@ -64,6 +64,8 @@ class Trader:
         self.percent_increase_of_order_size = kwargs.get('percent_increase_of_order_size') if kwargs.get('percent_increase_of_order_size') else 0
 
         self.sell_only_mode = kwargs.get('sell_only_mode', False)
+
+        self.last_assets_update = datetime.fromtimestamp(0)
 
     async def run(self):
         '''
@@ -109,7 +111,14 @@ class Trader:
                         resp = await self.create_order(**order_params)
                         if resp['error']:
                             logger.error(resp['message'])
-                            #await self.send_notification(f"{emoji.emojize(':x:', use_aliases=True)} , Create order failed\n {resp['message']}")
+                            if self._exchange == "BINANCE" and order_params['side'] == "SELL":
+                                trade_model = await self.get_trade_model(buy_order_id=order_params['buy_order_id'])
+                                if not trade_model:
+                                    self.price_streamer.unsubscribe(order_params['symbol'], order_params['buy_order_id'])
+                                if "SELL-LOSS" in order_params['order_id']:
+                                    await self.update_trade(side='BUY', exchange_account_id=self.account_model_id,
+                                                            buy_order_id=trade_model.buy_order_id, health="ERROR",
+                                                            reason=resp['message'])
                             continue
                         logger.info(resp)
                         result = resp['result']
