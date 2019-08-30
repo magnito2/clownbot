@@ -497,11 +497,11 @@ class Streamer:
                             if id.find("depth") == 0:
                                 self.__update_order_book(symbol, data)
                             elif id.find("kline") == 0:
-                                if self.__candlesticks[symbol] == None:
+                                if not self.__candlesticks.get(symbol):
                                     self.__candlesticks[symbol] = []
                                 self.__candlesticks[symbol].append(data["k"])
                             elif id.find("trades") == 0:
-                                if self.__trades[symbol] == None:
+                                if not self.__trades.get(symbol):
                                     self.__trades[symbol] = []
                                 self.__trades[symbol].append(data)
 
