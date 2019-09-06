@@ -51,7 +51,7 @@ class ExchangeAccount(db.Model):
             'max_orders_per_pair': self.max_orders_per_pair,
             'sell_only_mode': self.sell_only_mode,
             'btc_volume_increase_order_above': self.btc_volume_increase_order_above,
-            'percent_increase_of_order_size': self.percent_increase_of_order_size
+            'percent_increase_of_order_size': self.percent_increase_of_order_size *100 if self.percent_increase_of_order_size else 0 #remember this, always.
         }
 
     def __repr__(self):

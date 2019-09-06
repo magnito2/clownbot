@@ -30,6 +30,7 @@ class BinanceTrader(Trader):
             self.price_streamer = kwargs['price_streamer'] #class that streams in prices.
 
             self.scrapper_orders = {}
+            logger.name = ""
 
         except Exception as e:
             logger.exception(e)
@@ -43,7 +44,7 @@ class BinanceTrader(Trader):
             symbol = parts[1] + parts[0]
         else:
             symbol = kwargs.get('symbol')
-        logger.info(f"The symbol is {symbol}")
+        logger.info(f"{self.username} The symbol is {symbol}")
         side = kwargs.get('side')
         order_type = kwargs.get('type')
         price = kwargs.get('price')
@@ -72,6 +73,7 @@ class BinanceTrader(Trader):
         if side == "BUY":
             #check that the signal has not maxed out on quantity to trade
             if not self.signal_can_buy(kwargs.get('signal_name'), symbol):
+                logger.info(f"{self.username} Order has maxed out on limit")
                 return {'error': True, 'message': f'Signal {kwargs.get("signal_name")} has maxed out on the limit set to it'}
             order_id = kwargs.get('order_id', f"BUY_{str(uuid.uuid4())[:23]}")
         else:
@@ -97,8 +99,8 @@ class BinanceTrader(Trader):
                 if len(orders) > self.max_orders_per_symbol:
                     return {'error': True, 'message': f'There are already {self.max_orders_per_symbol} open orders for the symbol, cannot create a new one'}
 
-        print(f"{'+'*70}")
-        print(f"New order, {symbol} {side} {order_type} {quantity} {price} {order_id}")
+        logger.info(f"{'+'*70}")
+        logger.info(f"{self.username} New order, {symbol} {side} {order_type} {quantity} {price} {order_id}")
         if order_type == "LIMIT":
             resp = self.account.new_order(symbol= symbol, side=side, type=order_type,  quantity=quantity, price=f"{price:.8f}", new_client_order_id=order_id)
         elif order_type == "MARKET":
@@ -591,7 +593,7 @@ class BinanceTrader(Trader):
                         else:
                             sell_price = avg_price * (1 + self.profit_margin)
 
-                        logger.info(f"[+] Trade event, we've bought {trade_params['cummulative_filled_quantity']} at {avg_price}")
+                        logger.info(f"[+]{self.username} Trade event, we've bought {trade_params['cummulative_filled_quantity']} at {avg_price}")
                         logger.info(f"[+] Placing a sell for {trade_params['cummulative_filled_quantity']} at {sell_price}")
                         sell_size_resp = await self.a_quantity_and_price_roundoff(symbol=trade_params['symbol'], price=sell_price, side='SELL')
                         if sell_size_resp['error']:
@@ -643,7 +645,7 @@ class BinanceTrader(Trader):
                 if trade_params['type'] == "CANCELED": #delete cancelled sells too
                     order = await self.get_order_model(order_id=trade_params['orderId'])
                     if trade_params['side'] == "SELL":
-                        logger.warning("[!] You just cancelled a a SELL!")
+                        logger.warning(f"[!]{self.username} You just cancelled a a SELL!")
 
                     else: #deleted buy orders, cleanup.
                         if order:
@@ -800,10 +802,10 @@ class BinanceTrader(Trader):
                             continue  # no need to stop stop-losses
 
                         logger.warning(
-                            f"[!] Market price for {trade_model.symbol} has gone below stop loss trigger, placing stop loss sell")
+                            f"[!]{self.username} Market price for {trade_model.symbol} has gone below stop loss trigger, placing stop loss sell")
 
                         if trade_model.buy_quantity_executed * market_price < symbol_info.min_notional:
-                            logger.info("[!] The notional size of the order is below minimum")
+                            logger.info("[!]{self.username} The notional size of the order is below minimum")
                             await self.update_trade(side='BUY', exchange_account_id=self.account_model_id, buy_order_id=trade_model.buy_order_id, health="ERRORED", reason="Notional value below minimum")
                             continue
 
@@ -827,7 +829,7 @@ class BinanceTrader(Trader):
                             'exchange': 'BINANCE',
                             'side': 'SELL',
                             'price': sell_price,
-                            'quantity': trade_model.buy_quantity,
+                            'quantity': trade_model.buy_quantity_executed,
                             'order_id': order_id,
                             'buy_order_id': trade_model.buy_order_id
                         })
@@ -941,23 +943,23 @@ class BinanceTrader(Trader):
         return self.account.open_orders(symbol)
 
     async def create_stop_loss_order(self, params):
-        logger.info(f"Stop loss attempted {params}")
+        logger.info(f"{self.username} Stop loss attempted {params}")
         buy_order_id = params['buy_order_id']
         self.price_streamer.unsubscribe(params['symbol'], buy_order_id)
         trade_model = await self.get_trade_model(buy_order_id=buy_order_id)
         if not trade_model:
-            print(f"[!] The trade model {buy_order_id} cannot be found")
+            logger.error(f"[!]{self.username} The trade model {buy_order_id} cannot be found")
             return
         if trade_model.health == "ERROR":
-            logger.error("f Stop loss placed on a trade in error, #{trade_model}")
+            logger.error(f"{self.username} Stop loss placed on a trade in error, #{trade_model}")
             return
         if trade_model.sell_status in ["NEW","PARTIALLY_FILLED"]:
             resp = await self.cancel_order(trade_model.symbol, order_id=trade_model.sell_order_id)
 
             if resp['error']:
-                print("!"*100)
-                print("Here is where the error comes in")
-                logger.error(resp['message'])
+                logger.error("!"*100)
+                logger.error("Here is where the error comes in")
+                logger.error(f"{self.username} {resp['message']}")
                 if 'Unknown order sent' in resp['message']:
                     await self.send_notification(
                         f"{emoji.emojize(':x:', use_aliases=True)} Trade id {trade_model.id} Order Cloid {trade_model.sell_order_id} SELL {trade_model.sell_quantity} {trade_model.symbol} @ {trade_model.sell_price} cannot be cancelled. Order is unknown to the exchange")
@@ -967,7 +969,7 @@ class BinanceTrader(Trader):
                                             reason="Sell order is not found in exchange, could have been cancelled externally")
             else:
                 if trade_model.health == "ERROR":
-                    logger.error("f Stop loss placed on a trade in error, #{trade_model}")
+                    logger.error(f"{self.username} Stop loss placed on a trade in error, #{trade_model}")
                     return
                 sell_price = float(params['price']) * 0.995
                 order_id = f"SELL-LOSS_{trade_model.buy_order_id[:20]}"
@@ -977,7 +979,7 @@ class BinanceTrader(Trader):
                     'exchange': 'BINANCE',
                     'side': 'SELL',
                     'price': sell_price,
-                    'quantity': trade_model.buy_quantity,
+                    'quantity': trade_model.buy_quantity_executed,
                     'order_id': order_id,
                     'buy_order_id': trade_model.buy_order_id
                 })
@@ -1134,4 +1136,4 @@ class BinanceTrader(Trader):
                     await self.update_trade(**trade_model_params)
 
             else:
-                print(f"Trade #{trade.id} had not sold, buy status {trade.buy_status}")
+                logger.info(f"Trade #{trade.id} had not sold, buy status {trade.buy_status}")

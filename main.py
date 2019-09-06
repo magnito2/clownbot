@@ -17,8 +17,10 @@ import logging.handlers
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.DEBUG)
+logging.getLogger().setLevel(level=logging.ERROR)
 
 logger = logging.getLogger('clone')
+logging.getLogger('clone').setLevel(level=logging.DEBUG)
 
 fh = logging.handlers.RotatingFileHandler("logs/bot.log", maxBytes=100000, backupCount=5, encoding='utf-8')
 formatter = logging.Formatter('%(asctime)s  - %(name)s - %(levelname)s - %(message)s')

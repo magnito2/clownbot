@@ -4,7 +4,7 @@ The telegram api. Recieves signals from telegram and broadcasts events.
 '''
 from telethon import TelegramClient, events
 import logging, asyncio
-from .tg_signals import CQSScalpingFree, MagnitoCrypto, QualitySignalsChannel, CryptoPingMikeBot
+from .tg_signals import CQSScalpingFree, MagnitoCrypto, QualitySignalsChannel, CryptoPingMikeBot, CryptoPingXrayBot
 from models import create_session, TradeSignal, Signal
 from telethon.tl import types
 import emoji

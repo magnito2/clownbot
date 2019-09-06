@@ -80,13 +80,19 @@ class ExchangeSettings(Resource):
                 exchange_account.use_fixed_amount_per_order = True if use_fixed_amount_per_order == "True" else False
             if fixed_amount_per_order:
                 exchange_account.fixed_amount_per_order = fixed_amount_per_order
-            if btc_volume_increase_order_above:
+            if btc_volume_increase_order_above and percent_increase_of_order_size and float(btc_volume_increase_order_above):
                 exchange_account.btc_volume_increase_order_above = btc_volume_increase_order_above
-            if percent_increase_of_order_size:
-                exchange_account.percent_increase_of_order_size = float(percent_increase_of_order_size)/100
+                exchange_account.percent_increase_of_order_size = float(percent_increase_of_order_size) / 100
+            else:
+
+                if exchange_account.btc_volume_increase_order_above or exchange_account.percent_increase_of_order_size:
+                    
+                    exchange_account.btc_volume_increase_order_above = 0
+                    exchange_account.percent_increase_of_order_size = 0
             if sell_only_mode in ['True', 'False']:
                 exchange_account.sell_only_mode = True if sell_only_mode == "True" else False
 
+            db.session.add(exchange_account)
             db.session.commit()
 
             response = {"action": "starting-bot", "message": "Your trading bot will be started"}

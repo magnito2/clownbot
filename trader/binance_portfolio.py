@@ -71,7 +71,7 @@ def get_symbol_info(symbol):
 def get_btc_price(asset_name):
     if asset_name == "BTC":
         return 1
-    if asset_name in ["123","456"]:
+    if asset_name in ["123","456","VTHO"]:
         return None
     with create_session() as session:
         base_symbols = session.query(BinanceSymbol).filter_by(base_asset=asset_name).all()

@@ -24,7 +24,7 @@ class BinanceSocketManager:
     def subscribe(self, symbol, bot, buy_order_id, stop_price): #we will stick to 1m candles for now
         if not symbol in self.__subscription:
             self.__subscription[symbol] = []
-            logger.debug(f"Starting the socket for {symbol}")
+            logger.info(f"Starting the socket for {symbol}")
             self.streamer.add_candlesticks(symbol, "1m", self.check_stop_loss)
         ids = [x['buy_order_id'] for x in self.__subscription[symbol]]
         if buy_order_id in ids:
@@ -55,6 +55,9 @@ class BinanceSocketManager:
         close_price = float(kline['c'])
         kline_closed = kline['x']
         if not kline_closed:
+            return
+        if not symbol in self.__subscription:
+            #self.streamer.remove_candlesticks(symbol, "1m")
             return
         for sub in self.__subscription[symbol]:
             if close_price <= sub['stop_price']:

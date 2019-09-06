@@ -1,7 +1,11 @@
 import React,{Component} from 'react';
 import Moment from 'react-moment';
+import moment from 'moment';
 import 'moment-timezone';
 import Pagination from "react-js-pagination";
+
+Moment.globalLocal = true;
+Moment.globalFormat = "DD-MM-YYYY,HH:mm";
 
 class IndexTradesTable extends Component{
     constructor(props){
@@ -123,6 +127,8 @@ class IndexTradesTable extends Component{
                                             <tbody>
                                             {
                                                 show_trades_state_filtered.map((trade, index) => {
+                                                    let gmtDateTime = moment.utc(trade.timestamp);
+                                                    let localDateTime = gmtDateTime.local();
                                                     return <tr>
                                                         <td>{trade.id}</td>
                                                         <td>{trade.signal}</td>
@@ -134,7 +140,7 @@ class IndexTradesTable extends Component{
                                                         <td class={trade.sell_status === "FILLED" ? "process" : "denied"}>{
                                                             trade.sell_status === "FILLED" ? "COMPLETE" : "ONGOING"
                                                         }</td>
-                                                        <td><Moment fromNowDuring={1000*60*60*24} local format="DD-MM-YY,HH:mm">{trade.timestamp}</Moment></td>
+                                                        <td><Moment fromNowDuring={1000*60*60*24}>{localDateTime}</Moment></td>
                                                     </tr>
                                                 })
                                             }
@@ -168,30 +174,6 @@ class IndexTradesTable extends Component{
                                 </li>
                             </ul>
                         </nav>
-                    </div>
-                </div>
-            </div>
-            <div class="modal fade" id="mediumModal" tabindex="-1" role="dialog" aria-labelledby="mediumModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-lg" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="mediumModalLabel">Medium Modal</h5>
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <p>
-                                There are three species of zebras: the plains zebra, the mountain zebra and the Grévy's zebra. The plains zebra and the mountain
-                                zebra belong to the subgenus Hippotigris, but Grévy's zebra is the sole species of subgenus Dolichohippus. The latter
-                                resembles an ass, to which it is closely related, while the former two are more horse-like. All three belong to the
-                                genus Equus, along with other living equids.
-                            </p>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-primary">Confirm</button>
-                        </div>
                     </div>
                 </div>
             </div>

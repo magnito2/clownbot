@@ -4,7 +4,7 @@ the brain.
 
 import asyncio, logging, configparser
 
-from telegram_api import MyTelegramClient, MagnitoCrypto, CQSScalpingFree, QualitySignalsChannel, CryptoPingMikeBot
+from telegram_api import MyTelegramClient, MagnitoCrypto, CQSScalpingFree, QualitySignalsChannel, CryptoPingMikeBot, CryptoPingXrayBot
 
 from signals_reciever import HttpSignalReciever
 
@@ -13,9 +13,6 @@ from trader import BinanceTrader, BittrexTrader, BinanceSocketManager
 from models import create_session, StartUp, ExchangeAccount
 
 logger = logging.getLogger('clone.celebro')
-
-logging.getLogger().setLevel(level=logging.ERROR)
-logging.getLogger('clone').setLevel(level=logging.DEBUG)
 
 class Celebro:
 
@@ -126,7 +123,7 @@ class Celebro:
         bittrex_traders_queues = [trader.orders_queue for trader in self.exchange_traders if trader._exchange == "BITTREX"]
 
         magcrypt = MagnitoCrypto(CryptoPingMikeBot)
-        self.tg_client = MyTelegramClient(binance_trader_queues, bittrex_traders_queues, [magcrypt, CQSScalpingFree, QualitySignalsChannel, CryptoPingMikeBot], self.tg_kwargs)
+        self.tg_client = MyTelegramClient(binance_trader_queues, bittrex_traders_queues, [magcrypt, CQSScalpingFree, QualitySignalsChannel, CryptoPingMikeBot, CryptoPingXrayBot], self.tg_kwargs)
         producers = [asyncio.create_task(self.tg_client.run())]
 
         for trader in self.exchange_traders: #pass tg_client message queue to every traderxc

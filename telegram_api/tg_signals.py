@@ -114,3 +114,29 @@ class CryptoPingMikeBot(ProcessSignal):
             'signal_id': random.randint(0,10000)
         }
         return signal
+
+class CryptoPingXrayBot(ProcessSignal):
+
+    re_pattern = ".*#([A-Z]+)\nUp signal on (Binance|Bittrex)\n[\s\S]*price: (\d+\.\d+) BTC\n[\s\S]*"
+    name = "CryptoPingXrayBot"
+    short_name = "XPing"
+
+    @classmethod
+    def process(cls, message):
+        signal_raw = re.search(cls.re_pattern, message)
+        if not signal_raw:
+            f = open('dump.txt', 'w', encoding='utf-8')
+            f.write(message)
+            f.close()
+            return
+        signal_tup = signal_raw.groups()
+        signal = {
+            'signal_name': cls.name,
+            'symbol': f"BTC_{signal_tup[0]}",
+            'exchange': signal_tup[1].upper(),
+            'side': "BUY",
+            'price': float(signal_tup[2]),
+            'target_price': float(signal_tup[2])*1.02,
+            'signal_id': random.randint(0,10000)
+        }
+        return signal

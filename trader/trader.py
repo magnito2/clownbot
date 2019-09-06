@@ -84,25 +84,25 @@ class Trader:
 
         logger.info(f"[+] Entering the main loop")
         while self.keep_running:
-            logger.info(f"[+] {self._exchange} Awaiting the next order")
+            logger.info(f"[+] {self.username}-{self._exchange} Awaiting the next order")
             try:
                 _params = await asyncio.wait_for(self.orders_queue.get(), timeout=self.routine_check_interval)
-                logger.info(f"{self._exchange} recieved {_params}")
+                logger.info(f"{self.username}-{self._exchange} recieved {_params}")
                 if _params and 'exchange' in _params:
                     order_params = _params
-                    logger.debug(f'[+] Recieved new order parameters')
+                    logger.info(f'[+] {self.username} Recieved new order parameters')
                     if not type(order_params) is dict:
                         logger.error(f"Supported parameters should be dictionary, got {order_params} of type {type(order_params)}")
                         continue
                     if "signal_name" in order_params and order_params['signal_name'] not in self.subscribed_signals:
-                        logger.debug(f"[*] {self._exchange} You have not subscribed to {order_params['signal_name']}")
+                        logger.info(f"[*]{self.username} {self._exchange} You have not subscribed to {order_params['signal_name']}")
                         continue
                     if order_params['exchange'] == self._exchange:
                         if order_params['side'] == 'BUY' and self.sell_only_mode:
-                            logger.info(f"Bot is in sell only model, not placing order {order_params}")
+                            logger.info(f"{self.username} Bot is in sell only model, not placing order {order_params}")
                             continue
 
-                        logger.debug(f'[+] __ New__Order__Being__Created')
+                        logger.info(f'[+] {self.username}__ New__Order__Being__Created')
 
                         '''
                         Allow for overiding default params with user specified params for signal
@@ -110,7 +110,7 @@ class Trader:
 
                         resp = await self.create_order(**order_params)
                         if resp['error']:
-                            logger.error(resp['message'])
+                            logger.error(f"{self.username} {resp['message']}")
                             if self._exchange == "BINANCE" and order_params['side'] == "SELL":
                                 trade_model = await self.get_trade_model(buy_order_id=order_params['buy_order_id'])
                                 if not trade_model:
@@ -159,7 +159,7 @@ class Trader:
                                     f"Quantity: {float(trade_model.sell_quantity):.8f}")
                         continue #go to next loop
                     else:
-                        logger.debug(f'[!] Order not understood, {order_params}')
+                        logger.info(f'[!]{self.username} Order not understood, {order_params}')
                         continue
 
             except asyncio.TimeoutError:
@@ -543,8 +543,7 @@ class Trader:
             return wanted_assoc
 
     def signal_can_buy(self, signal_name, symbol):
-
-
+        logger.info(f"{self.username} Check {signal_name} can buy {symbol}")
         signal_assoc = self.get_account_signal_assoc(signal_name)
         if not signal_assoc or not signal_assoc.percent_investment:
             return True
@@ -552,9 +551,9 @@ class Trader:
         symbol_info = self.get_symbol_info(symbol)
         asset = async_to_sync(self.get_asset_models)(asset=symbol_info.quote_asset)
         if not asset:
-            print("Quote asset not found")
+            logger.error("Quote asset not found")
             return False
-        print(f"Asset is {asset.name}, free {asset.free}, locked {asset.locked}")
+        logger.info(f"Asset is {asset.name}, free {asset.free}, locked {asset.locked}")
 
 
         with create_session() as session:
@@ -576,10 +575,11 @@ class Trader:
                 total_portfolio += float(asset.free) + float(asset.locked)
 
             if signal_assoc.percent_investment and held_portfolio/total_portfolio > signal_assoc.percent_investment:
+                logger.info(f"{self.username}, {signal_name} cannot buy {symbol}")
                 return False
             else:
-                print(f"Percent investment: {signal_assoc.percent_investment}")
-                print(f"Held portfolio: {held_portfolio}")
-                print(f"total portfolio: {total_portfolio}")
-                print("Yes, we can buy")
+                logger.info(f"{self.username}Percent investment: {signal_assoc.percent_investment}")
+                logger.info(f"Held portfolio: {held_portfolio}")
+                logger.info(f"total portfolio: {total_portfolio}")
+                logger.info(f"{self.username}, {signal_name} can buy {symbol}")
                 return True
