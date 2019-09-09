@@ -6,8 +6,6 @@ from datetime import datetime, timedelta
 from models import create_session, Order, Asset, Trade, Portfolio, ExchangeAccount
 from utils import run_in_executor
 from utils.sync import async_to_sync, sync_to_async
-
-import os,sys,psutil
 import emoji
 
 from trader.binance_portfolio import get_btc_price
@@ -48,8 +46,6 @@ class Trader:
         self.keep_running = True
         self.api_key = kwargs.get('api_key')
 
-        self.last_bot_restart = datetime.utcnow()
-        self.bot_restart_interval = 60*60*3
         self.routine_check_interval = 60*1
 
         if kwargs.get('use_fixed_amount_per_order'):
@@ -115,7 +111,7 @@ class Trader:
                                 trade_model = await self.get_trade_model(buy_order_id=order_params['buy_order_id'])
                                 if not trade_model:
                                     self.price_streamer.unsubscribe(order_params['symbol'], order_params['buy_order_id'])
-                                if "SELL-LOSS" in order_params['order_id']:
+                                if "SELL" in order_params['order_id'] :
                                     await self.update_trade(side='BUY', exchange_account_id=self.account_model_id,
                                                             buy_order_id=trade_model.buy_order_id, health="ERROR",
                                                             reason=resp['message'])
@@ -129,8 +125,8 @@ class Trader:
                         if not trade_model:
                             logger.error(f"[+] Could not find trade model of id {result['buy_order_id']}")
                             continue
-                        print("*"*100)
-                        print(result)
+                        logger.info("*"*100)
+                        logger.info(result)
                         if result['side'] == "BUY":
                             signal = trade_model.get_signal()
                             if signal:
@@ -162,10 +158,13 @@ class Trader:
                         logger.info(f'[!]{self.username} Order not understood, {order_params}')
                         continue
 
+                elif 'alive_check' in _params:
+                    logger.info(f"[+] {self.username} Bot is alive")
+                    monitor = _params['monitor']
+                    await monitor.confirm_alive(self.api_key)
+
             except asyncio.TimeoutError:
                 logger.info(f"[*] {self._exchange} Regular maintenance")
-                if (datetime.utcnow() - self.last_bot_restart).seconds > self.bot_restart_interval:
-                    self.restart_bot()
 
                 if (datetime.utcnow() - self.last_portfolio_update_time).seconds > self.portfolio_update_interval:
                     self.last_portfolio_update_time = datetime.utcnow()
@@ -505,20 +504,6 @@ class Trader:
             account_model = session.query(ExchangeAccount).filter_by(id=self.account_model_id).first()
             account_model.valid_keys = is_valid
             session.commit()
-
-    def restart_bot(self):
-        """Restarts the current program, with file objects and descriptors
-              cleanup
-           """
-        logger.info("[!] Restarting the bot")
-        try:
-            p = psutil.Process(os.getpid())
-            for handler in p.open_files() + p.connections():
-                os.close(handler.fd)
-        except Exception as e:
-            logger.error(e)
-        python = sys.executable
-        os.execl(python, python, *sys.argv)
 
 
     def get_account_signal_assoc(self, signal_name=None, signal_id=None):

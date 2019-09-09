@@ -12,6 +12,12 @@ from trader import BinanceTrader, BittrexTrader, BinanceSocketManager
 
 from models import create_session, StartUp, ExchangeAccount
 
+from monitor import Monitor
+
+from datetime import datetime
+
+import os,sys,psutil
+
 logger = logging.getLogger('clone.celebro')
 
 class Celebro:
@@ -23,6 +29,9 @@ class Celebro:
         self.tg_kwargs['API_ID'] = config.get('DEFAULT','Telegram_API_ID')
         self.tg_kwargs['API_HASH'] = config.get('DEFAULT','Telegram_API_HASH')
         self.exchange_traders = []
+
+        self.last_bot_restart = datetime.utcnow()
+        self.bot_restart_interval = 60 * 60 * 3
 
         self.binance_price_streamer = BinanceSocketManager() #pushes prices in real time to subscribed bots.
 
@@ -104,6 +113,8 @@ class Celebro:
             session.add(startup)
             session.commit()
 
+        self.monitor = Monitor(self)
+
     def validate_account_model_params(self, kwargs):
         for key in ['api_key', 'api_secret', 'profit_margin', 'stop_loss_trigger', 'order_timeout']:
             if kwargs[key] == None:
@@ -138,6 +149,9 @@ class Celebro:
         self.http_signal_handler.celebro_instance = self
 
         producers.append(self.http_signal_handler_task)
+
+        self.monitor_handler = asyncio.create_task(self.monitor.run()) #M&E
+        producers.append(self.monitor_handler)
 
         await asyncio.gather(*producers)
         #await self.binance_orders_queue.join()  # Implicitly awaits consumers, too
@@ -253,3 +267,17 @@ class Celebro:
 
     async def subscribe_signal(self, signal):
         pass
+
+    def restart_bot(self):
+        """Restarts the current program, with file objects and descriptors
+              cleanup
+           """
+        logger.info("[!] Restarting the bot")
+        try:
+            p = psutil.Process(os.getpid())
+            for handler in p.open_files() + p.connections():
+                os.close(handler.fd)
+        except Exception as e:
+            logger.error(e)
+        python = sys.executable
+        os.execl(python, python, *sys.argv)

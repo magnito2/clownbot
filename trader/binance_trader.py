@@ -805,7 +805,7 @@ class BinanceTrader(Trader):
                             f"[!]{self.username} Market price for {trade_model.symbol} has gone below stop loss trigger, placing stop loss sell")
 
                         if trade_model.buy_quantity_executed * market_price < symbol_info.min_notional:
-                            logger.info("[!]{self.username} The notional size of the order is below minimum")
+                            logger.info(f"[!]{self.username} The notional size for {trade_model.symbol} of the order is below minimum")
                             await self.update_trade(side='BUY', exchange_account_id=self.account_model_id, buy_order_id=trade_model.buy_order_id, health="ERRORED", reason="Notional value below minimum")
                             continue
 

@@ -86,7 +86,7 @@ class ExchangeSettings(Resource):
             else:
 
                 if exchange_account.btc_volume_increase_order_above or exchange_account.percent_increase_of_order_size:
-                    
+
                     exchange_account.btc_volume_increase_order_above = 0
                     exchange_account.percent_increase_of_order_size = 0
             if sell_only_mode in ['True', 'False']:
