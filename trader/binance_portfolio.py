@@ -79,11 +79,20 @@ def get_btc_price(asset_name):
     if base_symbols:
         for symbol in base_symbols:
             if symbol.quote_asset == "BTC":
-                return float(symbol.lastPrice)
+                last_price_resp = get_last_price(symbol.name)
+                if last_price_resp['error']:
+                    print(last_price_resp['message'])
+                    return None
+                return float(last_price_resp['result'])
     if quote_symbols:
         for symbol in quote_symbols:
             if symbol.base_asset == "BTC":
-                return 1/float(symbol.lastPrice)
+                last_price_resp = get_last_price(symbol.name)
+                if last_price_resp['error']:
+                    print(last_price_resp['message'])
+                    return None
+                last_price = last_price_resp['result']
+                return 1/float(last_price)
     #print("Attempting 2 stage conversion")
     if base_symbols:
         for symbol in base_symbols:
@@ -91,11 +100,31 @@ def get_btc_price(asset_name):
                 inter_quote_symbols = session.query(BinanceSymbol).filter_by(quote_asset=symbol.quote_asset).all()
             for inter_symbol in inter_quote_symbols:
                 if inter_symbol.base_asset == "BTC":
-                    return float(symbol.lastPrice) * 1/float(inter_symbol.lastPrice)
+                    last_price_resp = get_last_price(symbol.name)
+                    if last_price_resp['error']:
+                        print(last_price_resp['message'])
+                        return None
+                    symbol_last_price = last_price_resp['result']
+                    last_price_resp = get_last_price(inter_symbol.name)
+                    if last_price_resp['error']:
+                        print(last_price_resp['message'])
+                        return None
+                    inter_symbol_last_price = last_price_resp['result']
+                    return float(symbol_last_price) * 1/float(inter_symbol_last_price)
     if quote_symbols:
         for symbol in quote_symbols:
             with create_session() as session:
                 inter_base_symbols = session.query(BinanceSymbol).filter_by(base_asset=symbol.base_asset).all()
             for inter_symbol in inter_base_symbols:
                 if inter_symbol.quote_asset == "BTC":
-                    return 1/float(symbol.lastPrice) * float(inter_symbol.lastPrice)
+                    last_price_resp = get_last_price(symbol.name)
+                    if last_price_resp['error']:
+                        print(last_price_resp['message'])
+                        return None
+                    symbol_last_price = last_price_resp['result']
+                    last_price_resp = get_last_price(inter_symbol.name)
+                    if last_price_resp['error']:
+                        print(last_price_resp['message'])
+                        return None
+                    inter_symbol_last_price = last_price_resp['result']
+                    return float(symbol_last_price) * 1 / float(inter_symbol_last_price)
