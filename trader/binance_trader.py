@@ -651,7 +651,7 @@ class BinanceTrader(Trader):
                         if order:
                             #await self.delete_order_model(order.client_order_id)
                             pass
-                        trade = await self.get_trade_model(buy_order_id=order.orderId)
+                        trade = await self.get_trade_model(buy_order_id=order.order_id)
                         if trade:
                             #await self.update_trade(buy_order_id=trade.buy_order_id)
                             pass
@@ -781,7 +781,7 @@ class BinanceTrader(Trader):
 
             for trade_model in open_trades_models:
                 symbol_info = self.get_symbol_info(trade_model.symbol)
-                if trade_model.buy_status == "NEW" and datetime.utcnow() - trade_model.buy_time > self.parse_time(self.order_timeout):
+                if trade_model.buy_status == "NEW" and trade_model.buy_time and datetime.utcnow() - trade_model.buy_time > self.parse_time(self.order_timeout):
                     resp = await self.cancel_order(symbol=trade_model.symbol, order_id=trade_model.buy_order_id)
                     if resp['error'] and 'code' in resp and resp['code'] == -2013:
                         logger.error(f"[!] {resp['message']}")
