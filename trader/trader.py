@@ -417,9 +417,9 @@ class Trader:
                 if not buy_order_id:
                     logger.error('[!] Include buy order id')
                     return
-                trade = session.query(Trade).filter_by(buy_order_id=buy_order_id).first()
+                trade = session.query(Trade).filter_by(buy_order_id=str(buy_order_id)).first()
                 if trade:
-                    session.query(Trade).filter_by(buy_order_id=buy_order_id).update(kwargs)
+                    session.query(Trade).filter_by(buy_order_id=str(buy_order_id)).update(kwargs)
                 else:
                     if not exchange_account_id:
                         logger.error('[!] Include buy order id')
@@ -429,9 +429,9 @@ class Trader:
 
             elif side == 'SELL':
                 if buy_order_id:
-                    trade = session.query(Trade).filter_by(buy_order_id=buy_order_id).first()
+                    trade = session.query(Trade).filter_by(buy_order_id=str(buy_order_id)).first()
                     if trade:
-                        session.query(Trade).filter_by(buy_order_id=buy_order_id).update(kwargs)
+                        session.query(Trade).filter_by(buy_order_id=str(buy_order_id)).update(kwargs)
                     else:
                         logger.error(f'Buy order of id {buy_order_id} not found')
                 else:
@@ -439,9 +439,9 @@ class Trader:
                     if not sell_order_id:
                         logger.error('Must include sell order id')
                         return
-                    trade = session.query(Trade).filter_by(sell_order_id=sell_order_id).first()
+                    trade = session.query(Trade).filter_by(sell_order_id=str(sell_order_id)).first()
                     if trade:
-                        session.query(Trade).filter_by(sell_order_id=sell_order_id).update(kwargs)
+                        session.query(Trade).filter_by(sell_order_id=str(sell_order_id)).update(kwargs)
                     else:
                         logger.error('If sell is new, include buy order id to link it to a buy, else, include sell order it.\n '
                                      'The provided sell order id was not found')
