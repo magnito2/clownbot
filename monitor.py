@@ -53,7 +53,7 @@ class Monitor:
 
                 if trader_check['dead_counts'] > self.allowed_dead_counts:
                     logger.error(f'Trader {trader.username} is dead as dodo, restarting it')
-                    self.celebro.reload_account(trader_check['account_id'])
+                    await self.celebro.reload_account(trader_check['account_id'])
                     continue
             if (datetime.utcnow() - self.celebro.last_bot_restart).seconds > self.celebro.bot_restart_interval:
                 await self.celebro.restart_bot()

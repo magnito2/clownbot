@@ -105,6 +105,7 @@ class ExchangeSettings(Resource):
             try:
                 resp = requests.post(app.config['BOT_ADDRESS'], json=params, timeout=15)
                 if not resp.status_code == 200:
+                    print(resp.raw())
                     response = {'message': "Ooops, we developed a problem handling the command"}
                     has_error = True
                 else:
