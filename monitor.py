@@ -56,7 +56,8 @@ class Monitor:
                     await self.celebro.reload_account(trader_check['account_id'])
                     continue
             if (datetime.utcnow() - self.celebro.last_bot_restart).seconds > self.celebro.bot_restart_interval:
-                await self.celebro.restart_bot()
+                #await self.celebro.restart_bot()
+                pass
 
     async def confirm_alive(self, api_key):
         for trader_check in self._check_list:
