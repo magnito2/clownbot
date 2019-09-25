@@ -53,7 +53,7 @@ from .trade_signals import TradeSignal
 class ExchangeAccountSignal(db.Model):
     __tablename__="exchange_accounts_signals"
 
-    id = db.Column('id', db.Integer, primary_key=True)
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     signal_id = db.Column(db.Integer, db.ForeignKey('signals.id'), primary_key=True)
     exchange_account_id = db.Column(db.Integer, db.ForeignKey('exchange_account.id'), primary_key=True)
     percent_investment = db.Column(db.Float) #set the lot size for each signal individually
