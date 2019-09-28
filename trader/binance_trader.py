@@ -316,7 +316,7 @@ class BinanceTrader(Trader):
                         cancel_order_resp = await self.cancel_order(trade.symbol, trade.sell_order_id)
                         if not cancel_order_resp['error']:
 
-                            order_id = f"SELL_{trade.buy_order_id[:24]}_#2"
+                            order_id = f"SELL_{trade.buy_order_id[:24]}_2"
                             await self.orders_queue.put({
                                 'symbol': trade.symbol,
                                 'exchange': 'BINANCE',
@@ -921,7 +921,7 @@ class BinanceTrader(Trader):
                         resp = await self.cancel_order(trade_model.symbol, order_id=trade_model.sell_order_id)
 
                         if not resp['error']:
-                            order_id = f"SELL_{str(trade_model.buy_order_id)}_#2"
+                            order_id = f"SELL_{str(trade_model.buy_order_id)}_2"
                             await self.orders_queue.put({
                                 'symbol': trade_model.symbol,
                                 'exchange': 'BINANCE',
