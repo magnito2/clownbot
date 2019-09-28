@@ -576,8 +576,13 @@ class BinanceTrader(Trader):
                         'buy_quantity_executed': trade_params['cummulative_filled_quantity'],
                         'exchange_account_id' : self.account_model_id,
                         'side': 'BUY',
-                        'executed_buy_price': float(trade_params['cummulative_quote_asset_transacted']) / float(trade_params['cummulative_filled_quantity'])
                     }
+                    if trade_params['cummulative_quote_asset_transacted'] and trade_params['cummulative_filled_quantity']:
+                        trade_model_params['executed_buy_price'] =  float(trade_params['cummulative_quote_asset_transacted']) / float(trade_params['cummulative_filled_quantity'])
+                    else:
+                        print("*"*100)
+                        print(f"Cannot find executed _buy_price, cumm_qoute_trans {trade_params['cummulative_quote_asset_transacted']}, cumm_filled_qty {trade_params['cummulative_filled_quantity']}")
+
                 elif trade_params['side'] == "SELL":
                     trade_model_params = {
                         'exchange': self._exchange,
@@ -586,8 +591,13 @@ class BinanceTrader(Trader):
                         'sell_status': trade_params['status'],
                         'sell_quantity_executed': trade_params['cummulative_filled_quantity'],
                         'side': 'SELL',
-                        'executed_sell_price': float(trade_params['cummulative_quote_asset_transacted']) / float(trade_params['cummulative_filled_quantity'])
                     }
+                    if trade_params['cummulative_quote_asset_transacted'] and trade_params['cummulative_filled_quantity']:
+                        trade_model_params['executed_sell_price'] = float(trade_params['cummulative_quote_asset_transacted']) / float(trade_params['cummulative_filled_quantity'])
+                    else:
+                        print("*"*100)
+                        print(f"Cannot find executed buy price, cumm_qt_trans {trade_params['cummulative_quote_asset_transacted']}, cumm_filled_qty {trade_params['cummulative_filled_quantity']}")
+
                 else:
                     await self.send_admin_notification(f"Cant tell if it is buy or sell, {str(trade_params)}")
                     return
