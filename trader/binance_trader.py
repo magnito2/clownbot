@@ -316,7 +316,7 @@ class BinanceTrader(Trader):
                         cancel_order_resp = await self.cancel_order(trade.symbol, trade.sell_order_id)
                         if not cancel_order_resp['error']:
 
-                            order_id = f"SELL_{trade.buy_order_id}_#2"
+                            order_id = f"SELL_{trade.buy_order_id[:24]}_#2"
                             await self.orders_queue.put({
                                 'symbol': trade.symbol,
                                 'exchange': 'BINANCE',
@@ -697,7 +697,7 @@ class BinanceTrader(Trader):
                                 message += f"{emoji.emojize(':heavy_exclamation_mark:')}, We did not sell everything, Bought {trade_model.buy_quantity_executed}, Sold {trade_model.sell_quantity_executed}"
                                 message += f"Attempting to sell the remaining {float(trade_model.buy_quantity_executed) - float(trade_model.sell_quantity_executed)}"
 
-                                order_id = f"SELL_{trade_model.buy_order_id}_#2"
+                                order_id = f"SELL_{trade_model.buy_order_id[:24]}_#2"
                                 await self.orders_queue.put({
                                     'symbol': trade_params['symbol'],
                                     'exchange': 'BINANCE',
