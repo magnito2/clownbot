@@ -31,6 +31,9 @@ class Trade(db.Model):
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     health = db.Column(db.String(64))
     reason = db.Column(db.String(255))
+    executed_buy_price = db.Column(db.Float) #for binance, cumm_quote_asset/cumm_base_asset
+    executed_sell_price = db.Column(db.Float)
+    completed = db.Column(db.Boolean) #final mark the no further action shall be taken on this trade. trade marked ready for deletion
 
     def serialize(self):
 
@@ -47,7 +50,10 @@ class Trade(db.Model):
             'signal': self.trade_signal.signal_name if self.trade_signal else "",
             'PNL': 0 if self.sell_price is None or self.sell_quantity is None or self.buy_price is None or self.buy_price is None else round(self.sell_price * self.sell_quantity - self.buy_price * self.buy_quantity, 6),
             'sell_status': self.sell_status,
-            'timestamp': self.timestamp.isoformat()
+            'timestamp': self.timestamp.isoformat(),
+            'executed_price_price': self.executed_buy_price,
+            'executed_sell_price': self.executed_sell_price,
+            'completed': self.completed
         }
 
     def __repr__(self):

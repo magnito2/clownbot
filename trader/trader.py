@@ -42,11 +42,11 @@ class Trader:
         self.subscribed_signals = kwargs.get('subscribed_signals')
         self.account_model_id = kwargs.get('exchange_account_model_id')
         self.last_portfolio_update_time = datetime.utcnow()
-        self.portfolio_update_interval = kwargs.get('portfolio_update_interval', 60*1)
+        self.portfolio_update_interval = kwargs.get('portfolio_update_interval', 60*60*2)
         self.keep_running = True
         self.api_key = kwargs.get('api_key')
 
-        self.routine_check_interval = 60*1
+        self.routine_check_interval = 60*5
 
         if kwargs.get('use_fixed_amount_per_order'):
             self.btc_per_order = float(kwargs.get('fixed_amount_per_order'))
@@ -62,6 +62,8 @@ class Trader:
         self.sell_only_mode = kwargs.get('sell_only_mode', False)
 
         self.last_assets_update = datetime.fromtimestamp(0)
+        self.max_age_of_portfolio_in_days = 100
+        self.max_age_of_trades_in_days = 30
 
     async def run(self):
         '''
@@ -144,7 +146,12 @@ class Trader:
                                                      f"Stop loss trigger price: {float(result['buy_price']) * (1 - self.stop_loss_trigger):.8f}\n"
                                                      f"Signal: {resp['additional_info']['signal']}")
                         elif result['side'] == "SELL":
-                            if float(trade_model.sell_price) > float(trade_model.buy_price):
+                            if float(trade_model.executed_buy_price) and float(trade_model.sell_price) > float(trade_model.executed_buy_price): #if executed buy price is available, use it
+                                await self.send_notification(
+                                    f"{emoji.emojize(':white_check_mark:', use_aliases=True)}Now Selling\n {emoji.emojize(':id:', use_aliases=True)}: #{trade_model.id}\n"
+                                    f"Symbol: {trade_model.symbol}\n Buy price: {float(trade_model.executed_buy_price):.8f}\n Sell price: {float(trade_model.sell_price):.8f}\n"
+                                    f"Quantity: {float(trade_model.sell_quantity):.8f}")
+                            elif float(trade_model.sell_price) > float(trade_model.buy_price):
                                 await self.send_notification(f"{emoji.emojize(':white_check_mark:', use_aliases=True)}Now Selling\n {emoji.emojize(':id:', use_aliases=True)}: #{trade_model.id}\n"
                                                          f"Symbol: {trade_model.symbol}\n Buy price: {float(trade_model.buy_price):.8f}\n Sell price: {float(trade_model.sell_price):.8f}\n"
                                                          f"Quantity: {float(trade_model.sell_quantity):.8f}")
@@ -479,8 +486,37 @@ class Trader:
 
             logger.info(f"Total portfolio is {portfolio}")
             await self.update_portfolio_model(portfolio)
+
+            await sync_to_async(self.delete_old_portfolio_models)()
+
         except Exception as e:
             logger.exception(e)
+
+    def delete_old_portfolio_models(self):
+        """
+        delete the old models, portfolio adds a big overhead on server database
+        :return:
+        """
+        time_before = datetime.utcnow() - timedelta(days=self.max_age_of_portfolio_in_days)
+        with create_session() as session:
+            old_portfolios = session.query(Portfolio).filter_by(exchange_account_id=self.account_model_id).filter(Portfolio.timestamp < time_before).all()
+            for old_portfolio in old_portfolios:
+                session.delete(old_portfolio)
+            session.commit()
+            return True
+
+    def delete_old_trades(self):
+        """
+        delete the old trades that have been marked completed
+        :return:
+        """
+        time_before = datetime.utcnow() - timedelta(days=self.max_age_of_trades_in_days)
+        with create_session() as session:
+            old_trades = session.query(Trade).filter_by(exchange_account_id=self.account_model_id).filter_by(completed=True).filter(Trade.timestamp < time_before)
+            for trade in old_trades:
+                session.delete(trade)
+            session.commit()
+            return True
 
     async def _validate_keys(self):
         resp = await self.validate_keys()

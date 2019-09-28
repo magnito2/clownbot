@@ -311,6 +311,22 @@ class BinanceTrader(Trader):
                 if trade.sell_status in ['NEW', 'PARTIALLY_FILLED']:
                     self.price_streamer.subscribe(trade.symbol, self, trade.buy_order_id, trade.buy_price * (1- self.stop_loss_trigger))
 
+                    if float(trade.sell_quantity_executed) * 0.99 < float(trade.buy_quantity_executed):
+                        logger.info(f"#{trade.id} - Trade has not placed all bought assets on sell")
+                        cancel_order_resp = await self.cancel_order(trade.symbol, trade.sell_order_id)
+                        if not cancel_order_resp['error']:
+
+                            order_id = f"SELL_{trade.buy_order_id}_#2"
+                            await self.orders_queue.put({
+                                'symbol': trade.symbol,
+                                'exchange': 'BINANCE',
+                                'side': 'SELL',
+                                'price': trade.sell_price,
+                                'quantity': float(trade.buy_quantity_executed) - float(
+                                    trade.sell_quantity_executed),
+                                'order_id': order_id,
+                                'buy_order_id': trade.buy_order_id
+                            })
 
         except binance.BinanceError as e:
             if e.code in [-2014, -2015]:
@@ -367,8 +383,8 @@ class BinanceTrader(Trader):
 
     async def warm_up_sync_trades_and_orders(self):
         trades = await self.get_trade_models()
-        open_buys = [trade for trade in trades if trade.buy_status in ['NEW', 'PARTIALLY_FILLED']]
-        open_sells = [trade for trade in trades if trade.sell_status in ['NEW', 'PARTIALLY_FILLED']]
+        open_buys = [trade for trade in trades if trade.buy_status in ['NEW', 'PARTIALLY_FILLED'] and not trade.completed]
+        open_sells = [trade for trade in trades if trade.sell_status in ['NEW', 'PARTIALLY_FILLED'] and not trade.completed]
         #closed_buys_empty_sells = [trade for trade in trades if trade.buy_status in ['FILLED'] and trade.sell_status == None]
 
         for trade in open_buys:
@@ -392,7 +408,17 @@ class BinanceTrader(Trader):
                     'status': _order['status']
                 }
 
+                if not float(order_model_params['cummulative_quote_asset_transacted']):
+                    del order_model_params['cummulative_quote_asset_transacted']
+                    executed_price = 0
+                else:
+                    try:
+                        executed_price = float(order_model_params['cummulative_quote_asset_transacted']) / float(order_model_params['cummulative_filled_quantity'])
+                    except Exception as e:
+                        executed_price = 0
+
                 await self.update_order_model(**order_model_params)
+
 
                 trade_model_params = {
                     'exchange': self._exchange,
@@ -400,9 +426,18 @@ class BinanceTrader(Trader):
                     'buy_status': _order['status'],
                     'buy_quantity_executed': _order['executedQty'],
                     'exchange_account_id': self.account_model_id,
+                    #'executed_buy_price': executed_price, check down here
                     'side': 'BUY'
                 }
+
+                if executed_price:
+                    trade_model_params['executed_buy_price'] = executed_price
+
+                if trade_model_params['buy_status'] == "CANCELED":
+                    trade_model_params['completed'] = True
+
                 await self.update_trade(**trade_model_params)
+
             except binance.BinanceError as e:
                 if e.code == -2013:
                     logger.error(f"trade #{trade.id} order #{trade.buy_order_id}, {e.message}")
@@ -435,6 +470,15 @@ class BinanceTrader(Trader):
                     'status': _order['status']
                 }
 
+                if not float(order_model_params['cummulative_quote_asset_transacted']):
+                    del order_model_params['cummulative_quote_asset_transacted']
+                    executed_price = 0
+                else:
+                    try:
+                        executed_price = float(order_model_params['cummulative_quote_asset_transacted']) / float(order_model_params['cummulative_filled_quantity'])
+                    except Exception as e:
+                        executed_price = 0
+
                 await self.update_order_model(**order_model_params)
 
                 trade_model_params = {
@@ -443,8 +487,13 @@ class BinanceTrader(Trader):
                     'sell_status': _order['status'],
                     'sell_quantity_executed': _order['executedQty'],
                     'exchange_account_id': self.account_model_id,
+                    #'executed_sell_price': executed_price check down here
                     'side': 'SELL'
                 }
+
+                if executed_price:
+                    trade_model_params['executed_sell_price'] = executed_price
+
                 await self.update_trade(**trade_model_params)
             except binance.BinanceError as e:
                 logger.error(e.message)
@@ -526,7 +575,8 @@ class BinanceTrader(Trader):
                         'buy_status': trade_params['status'],
                         'buy_quantity_executed': trade_params['cummulative_filled_quantity'],
                         'exchange_account_id' : self.account_model_id,
-                        'side': 'BUY'
+                        'side': 'BUY',
+                        'executed_buy_price': float(trade_params['cummulative_quote_asset_transacted']) / float(trade_params['cummulative_filled_quantity'])
                     }
                 elif trade_params['side'] == "SELL":
                     trade_model_params = {
@@ -535,7 +585,8 @@ class BinanceTrader(Trader):
                         'sell_order_id': trade_params['orderId'],
                         'sell_status': trade_params['status'],
                         'sell_quantity_executed': trade_params['cummulative_filled_quantity'],
-                        'side': 'SELL'
+                        'side': 'SELL',
+                        'executed_sell_price': float(trade_params['cummulative_quote_asset_transacted']) / float(trade_params['cummulative_filled_quantity'])
                     }
                 else:
                     await self.send_admin_notification(f"Cant tell if it is buy or sell, {str(trade_params)}")
@@ -620,7 +671,6 @@ class BinanceTrader(Trader):
                         })
 
                         self.price_streamer.subscribe(order_model_params['symbol'], self, trade_params['orderId'], avg_price * (1 - self.stop_loss_trigger))
-
                         message = f"{emoji.emojize(':dollar:', use_aliases=True)} {order_model_params['status']}: {order_model_params['side']}ING {float(order_model_params['quantity']):.8f} {order_model_params['symbol']}@ {float(order_model_params['price']):.8f}"
                         message += f"\n Amount bought {float(trade_params['cummulative_filled_quantity']):.8f} at {avg_price} \n"
                         message += f"Target sell price {sell_price:.8f}"
@@ -629,16 +679,36 @@ class BinanceTrader(Trader):
                         if trade_model:
                             message = f"{emoji.emojize(':id:', use_aliases=True)} #{trade_model.id}\n"
                             message += f"Symbol {trade_model.symbol}\n"
-                            if float(trade_model.sell_price) * float(trade_model.sell_quantity_executed) - float(trade_model.buy_price) * float(trade_model.buy_quantity_executed) > 0:
+
+                            #AUDIT TIME !!
+                            #did we all everything?
+                            if not trade_model.sell_quantity_executed > trade_model.buy_quantity_executed * 0.99: #fee allowance
+                                message += f"{emoji.emojize(':heavy_exclamation_mark:')}, We did not sell everything, Bought {trade_model.buy_quantity_executed}, Sold {trade_model.sell_quantity_executed}"
+                                message += f"Attempting to sell the remaining {float(trade_model.buy_quantity_executed) - float(trade_model.sell_quantity_executed)}"
+
+                                order_id = f"SELL_{trade_model.buy_order_id}_#2"
+                                await self.orders_queue.put({
+                                    'symbol': trade_params['symbol'],
+                                    'exchange': 'BINANCE',
+                                    'side': 'SELL',
+                                    'price': trade_model.sell_price ,
+                                    'quantity': float(trade_model.buy_quantity_executed) - float(trade_model.sell_quantity_executed),
+                                    'order_id': order_id,
+                                    'buy_order_id': trade_model.buy_order_id
+                                })
+
+                            buy_price = float(trade_model.executed_buy_price) if trade_model.executed_buy_price else trade_model.buy_price
+                            sell_price = float(trade_model.executed_sell_price) if trade_model.executed_sell_price else trade_model.sell_price
+                            profit = float(sell_price) * float(trade_model.sell_quantity_executed) - float(buy_price) * float(trade_model.buy_quantity_executed)
+
+                            if profit > 0:
                                 message += f"{emoji.emojize(':white_check_mark:', use_aliases=True)} {emoji.emojize(':dollar:', use_aliases=True)} Trade Closed at Profit"
-                                message += f"\n Bought {float(trade_model.buy_quantity_executed):.8f} {trade_model.symbol}@ {float(trade_model.buy_price):.8f}"
-                                message += f"\n Sold {float(trade_model.sell_quantity_executed):.8f} {trade_model.symbol}@ {float(trade_model.sell_price):.8f}"
-                                message += f"\n Profit {float(trade_model.sell_price) * float(trade_model.sell_quantity_executed) - float(trade_model.buy_price) * float(trade_model.buy_quantity_executed):.8f}\n"
                             else:
                                 message += f"{emoji.emojize(':x:', use_aliases=True)} Trade Closed at Loss"
-                                message += f"\n Bought {float(trade_model.buy_quantity_executed):.8f} {trade_model.symbol}@ {float(trade_model.buy_price):.8f}"
-                                message += f"\n Sold {float(trade_model.sell_quantity_executed):.8f} {trade_model.symbol}@ {float(trade_model.sell_price):.8f}"
-                                message += f"\n Profit {float(trade_model.sell_price) * float(trade_model.sell_quantity_executed) - float(trade_model.buy_price) * float(trade_model.buy_quantity_executed):.8f}\n"
+
+                            message += f"\n Bought {float(trade_model.buy_quantity_executed):.8f} {trade_model.symbol}@ {buy_price:.8f}"
+                            message += f"\n Sold {float(trade_model.sell_quantity_executed):.8f} {trade_model.symbol}@ {sell_price:.8f}"
+                            message += f"\n Profit {profit}, {(profit/(buy_price * float(trade_model.buy_quantity_executed))) * 100}%\n"
 
                             self.price_streamer.unsubscribe(trade_model.symbol, trade_model.buy_order_id)
 
@@ -833,6 +903,23 @@ class BinanceTrader(Trader):
                             'order_id': order_id,
                             'buy_order_id': trade_model.buy_order_id
                         })
+
+                    #audit, did we sell everything we bought?
+                    elif float(trade_model.sell_quantity_executed) * 0.99 < float(trade_model.buy_quantity_executed):
+                        logger.info(f"#{trade_model.id}, selling less than was bought, replacing order")
+                        resp = await self.cancel_order(trade_model.symbol, order_id=trade_model.sell_order_id)
+
+                        if not resp['error']:
+                            order_id = f"SELL_{str(trade_model.buy_order_id)}_#2"
+                            await self.orders_queue.put({
+                                'symbol': trade_model.symbol,
+                                'exchange': 'BINANCE',
+                                'side': 'SELL',
+                                'price': trade_model.sell_price,
+                                'quantity': trade_model.buy_quantity_executed,
+                                'order_id': order_id,
+                                'buy_order_id': trade_model.buy_order_id
+                            })
 
                 if trade_model.buy_status == "FILLED" and not trade_model.sell_status in ['NEW', 'FILLED', 'PARTIALLY_FILLED','CANCELLED','ERRORED']:
                     if not trade_model.buy_price:

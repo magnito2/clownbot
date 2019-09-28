@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, DateTime, String, Float, ForeignKey
+from sqlalchemy import Column, Integer, DateTime, String, Float, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -34,6 +34,10 @@ class Trade(Base):
     timestamp = Column(DateTime, index=True, default=datetime.utcnow)
     health = Column(String(64))
     reason = Column(String(255))
+    executed_buy_price = Column(Float, default=0)  # for binance, cumm_quote_asset/cumm_base_asset
+    executed_sell_price = Column(Float, default=0)
+    completed = Column(Boolean) #this is the final mark that no further action should be taken on the trade. these trades should be deleted
+                                #every set period of time. e.g 2 weeks
 
     def serialize(self):
         return {
