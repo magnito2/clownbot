@@ -577,7 +577,7 @@ class BinanceTrader(Trader):
                         'exchange_account_id' : self.account_model_id,
                         'side': 'BUY',
                     }
-                    if trade_params['cummulative_quote_asset_transacted'] and trade_params['cummulative_filled_quantity']:
+                    if float(trade_params['cummulative_quote_asset_transacted']) and float(trade_params['cummulative_filled_quantity']):
                         trade_model_params['executed_buy_price'] =  float(trade_params['cummulative_quote_asset_transacted']) / float(trade_params['cummulative_filled_quantity'])
                     else:
                         print("*"*100)
@@ -592,7 +592,7 @@ class BinanceTrader(Trader):
                         'sell_quantity_executed': trade_params['cummulative_filled_quantity'],
                         'side': 'SELL',
                     }
-                    if trade_params['cummulative_quote_asset_transacted'] and trade_params['cummulative_filled_quantity']:
+                    if float(trade_params['cummulative_quote_asset_transacted']) and float(trade_params['cummulative_filled_quantity']):
                         print(f"&&&&&&&&&&&&, cummulative_quote_asset_transacted {trade_params['cummulative_quote_asset_transacted']}, cumm_filled_qty {trade_params['cummulative_filled_quantity']}")
                         trade_model_params['executed_sell_price'] = float(trade_params['cummulative_quote_asset_transacted']) / float(trade_params['cummulative_filled_quantity'])
                     else:
