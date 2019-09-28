@@ -512,9 +512,22 @@ class Trader:
         """
         time_before = datetime.utcnow() - timedelta(days=self.max_age_of_trades_in_days)
         with create_session() as session:
-            old_trades = session.query(Trade).filter_by(exchange_account_id=self.account_model_id).filter_by(completed=True).filter(Trade.timestamp < time_before)
+            old_trades = session.query(Trade).filter_by(exchange_account_id=self.account_model_id).filter_by(completed=True).filter(Trade.timestamp < time_before).all()
             for trade in old_trades:
                 session.delete(trade)
+            session.commit()
+            return True
+
+    def delete_old_orders(self):
+        """
+        delete the old orders that have been filled more than 2 weeks ago
+        :return:
+        """
+        time_before = datetime.utcnow() - timedelta(days=self.max_age_of_trades_in_days)
+        with create_session() as session:
+            old_orders = session.query(Order).filter_by(exchange_account_id=self.account_model_id).filter_by(status="FILLED").filter(Order.timestamp < time_before).all()
+            for order in old_orders:
+                session.delete(order)
             session.commit()
             return True
 
