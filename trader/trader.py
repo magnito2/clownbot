@@ -48,7 +48,7 @@ class Trader:
 
         self.routine_check_interval = 60*5
 
-        if kwargs.get('use_fixed_amount_per_order'):
+        if kwargs.get('use_fixed_amount_per_order') and kwargs.get('fixed_amount_per_order'):
             self.btc_per_order = float(kwargs.get('fixed_amount_per_order'))
         if kwargs.get('percent_size'):
             self.percent_size = float(kwargs.get('percent_size')) / 100

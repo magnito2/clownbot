@@ -579,9 +579,6 @@ class BinanceTrader(Trader):
                     }
                     if float(trade_params['cummulative_quote_asset_transacted']) and float(trade_params['cummulative_filled_quantity']):
                         trade_model_params['executed_buy_price'] =  float(trade_params['cummulative_quote_asset_transacted']) / float(trade_params['cummulative_filled_quantity'])
-                    else:
-                        print("*"*100)
-                        print(f"Cannot find executed _buy_price, cumm_qoute_trans {trade_params['cummulative_quote_asset_transacted']}, cumm_filled_qty {trade_params['cummulative_filled_quantity']}")
 
                 elif trade_params['side'] == "SELL":
                     trade_model_params = {
@@ -593,11 +590,7 @@ class BinanceTrader(Trader):
                         'side': 'SELL',
                     }
                     if float(trade_params['cummulative_quote_asset_transacted']) and float(trade_params['cummulative_filled_quantity']):
-                        print(f"&&&&&&&&&&&&, cummulative_quote_asset_transacted {trade_params['cummulative_quote_asset_transacted']}, cumm_filled_qty {trade_params['cummulative_filled_quantity']}")
                         trade_model_params['executed_sell_price'] = float(trade_params['cummulative_quote_asset_transacted']) / float(trade_params['cummulative_filled_quantity'])
-                    else:
-                        print("*"*100)
-                        print(f"Cannot find executed buy price, cumm_qt_trans {trade_params['cummulative_quote_asset_transacted']}, cumm_filled_qty {trade_params['cummulative_filled_quantity']}")
 
                 else:
                     await self.send_admin_notification(f"Cant tell if it is buy or sell, {str(trade_params)}")
@@ -719,7 +712,7 @@ class BinanceTrader(Trader):
 
                             message += f"\n Bought {float(trade_model.buy_quantity_executed):.8f} {trade_model.symbol}@ {buy_price:.8f}"
                             message += f"\n Sold {float(trade_model.sell_quantity_executed):.8f} {trade_model.symbol}@ {sell_price:.8f}"
-                            message += f"\n Profit {profit}, {(profit/(buy_price * float(trade_model.buy_quantity_executed))) * 100}%\n"
+                            message += f"\n Profit {profit:.8f}, {(profit/(buy_price * float(trade_model.buy_quantity_executed))) * 100:.4f}%\n"
 
                             self.price_streamer.unsubscribe(trade_model.symbol, trade_model.buy_order_id)
 
