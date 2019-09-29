@@ -312,21 +312,24 @@ class BinanceTrader(Trader):
                     self.price_streamer.subscribe(trade.symbol, self, trade.buy_order_id, trade.buy_price * (1- self.stop_loss_trigger))
 
                     if float(trade.sell_quantity_executed) * 0.99 < float(trade.buy_quantity_executed):
-                        logger.info(f"#{trade.id} - Trade has not placed all bought assets on sell")
-                        cancel_order_resp = await self.cancel_order(trade.symbol, trade.sell_order_id)
-                        if not cancel_order_resp['error']:
-
-                            order_id = f"SELL_{trade.buy_order_id[:24]}_2"
-                            await self.orders_queue.put({
-                                'symbol': trade.symbol,
-                                'exchange': 'BINANCE',
-                                'side': 'SELL',
-                                'price': trade.sell_price,
-                                'quantity': float(trade.buy_quantity_executed) - float(
-                                    trade.sell_quantity_executed),
-                                'order_id': order_id,
-                                'buy_order_id': trade.buy_order_id
-                            })
+                        #confirm asset is available and is sellable.
+                        asset = await self.get_asset_models(asset=trade.base_asset)
+                        symbol = await sync_to_async(self.get_symbol_info)(trade.symbol)
+                        if float(asset.free) > float(symbol.min_qty) and float(asset.free) * float(trade.sell_price) * 0.98 > symbol.min_notional:
+                            logger.info(f"#{trade.id} - Trade has not placed all bought assets on sell")
+                            cancel_order_resp = await self.cancel_order(trade.symbol, trade.sell_order_id)
+                            if not cancel_order_resp['error']:
+                                order_id = f"SELL_{trade.buy_order_id[:24]}_2"
+                                await self.orders_queue.put({
+                                    'symbol': trade.symbol,
+                                    'exchange': 'BINANCE',
+                                    'side': 'SELL',
+                                    'price': trade.sell_price,
+                                    'quantity': float(trade.buy_quantity_executed) - float(
+                                        trade.sell_quantity_executed),
+                                    'order_id': order_id,
+                                    'buy_order_id': trade.buy_order_id
+                                })
 
         except binance.BinanceError as e:
             if e.code in [-2014, -2015]:
@@ -910,20 +913,23 @@ class BinanceTrader(Trader):
 
                     #audit, did we sell everything we bought?
                     elif float(trade_model.sell_quantity_executed) * 0.99 < float(trade_model.buy_quantity_executed):
-                        logger.info(f"#{trade_model.id}, selling less than was bought, replacing order")
-                        resp = await self.cancel_order(trade_model.symbol, order_id=trade_model.sell_order_id)
-
-                        if not resp['error']:
-                            order_id = f"SELL_{str(trade_model.buy_order_id)}_2"
-                            await self.orders_queue.put({
-                                'symbol': trade_model.symbol,
-                                'exchange': 'BINANCE',
-                                'side': 'SELL',
-                                'price': trade_model.sell_price,
-                                'quantity': trade_model.buy_quantity_executed,
-                                'order_id': order_id,
-                                'buy_order_id': trade_model.buy_order_id
-                            })
+                        #confirm the balance is sellable and is available
+                        asset = await self.get_asset_models(asset=trade_model.base_asset)
+                        symbol = await sync_to_async(self.get_symbol_info)(trade_model.symbol)
+                        if float(asset.free) > float(symbol.min_qty) and float(asset.free) * float(trade_model.sell_price) * 0.98 > symbol.min_notional:
+                            logger.info(f"#{trade_model.id}, selling less than was bought, replacing order")
+                            resp = await self.cancel_order(trade_model.symbol, order_id=trade_model.sell_order_id)
+                            if not resp['error']:
+                                order_id = f"SELL_{str(trade_model.buy_order_id)}_2"
+                                await self.orders_queue.put({
+                                    'symbol': trade_model.symbol,
+                                    'exchange': 'BINANCE',
+                                    'side': 'SELL',
+                                    'price': trade_model.sell_price,
+                                    'quantity': trade_model.buy_quantity_executed,
+                                    'order_id': order_id,
+                                    'buy_order_id': trade_model.buy_order_id
+                                })
 
                 if trade_model.buy_status == "FILLED" and not trade_model.sell_status in ['NEW', 'FILLED', 'PARTIALLY_FILLED','CANCELLED','ERRORED']:
                     if not trade_model.buy_price:
