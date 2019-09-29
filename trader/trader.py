@@ -146,7 +146,7 @@ class Trader:
                                                      f"Stop loss trigger price: {float(result['buy_price']) * (1 - self.stop_loss_trigger):.8f}\n"
                                                      f"Signal: {resp['additional_info']['signal']}")
                         elif result['side'] == "SELL":
-                            if float(trade_model.executed_buy_price) and float(trade_model.sell_price) > float(trade_model.executed_buy_price): #if executed buy price is available, use it
+                            if trade_model.executed_buy_price and float(trade_model.sell_price) > float(trade_model.executed_buy_price): #if executed buy price is available, use it
                                 await self.send_notification(
                                     f"{emoji.emojize(':white_check_mark:', use_aliases=True)}Now Selling\n {emoji.emojize(':id:', use_aliases=True)}: #{trade_model.id}\n"
                                     f"Symbol: {trade_model.symbol}\n Buy price: {float(trade_model.executed_buy_price):.8f}\n Sell price: {float(trade_model.sell_price):.8f}\n"
