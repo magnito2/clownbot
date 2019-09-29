@@ -311,6 +311,7 @@ class BinanceTrader(Trader):
                 if trade.sell_status in ['NEW', 'PARTIALLY_FILLED']:
                     self.price_streamer.subscribe(trade.symbol, self, trade.buy_order_id, trade.buy_price * (1- self.stop_loss_trigger))
 
+                    '''
                     if float(trade.sell_quantity_executed) * 0.99 < float(trade.buy_quantity_executed):
                         #confirm asset is available and is sellable.
                         asset = await self.get_asset_models(asset=trade.base_asset)
@@ -334,7 +335,7 @@ class BinanceTrader(Trader):
                                         trade.sell_quantity_executed),
                                     'order_id': order_id,
                                     'buy_order_id': trade.buy_order_id
-                                })
+                                })'''
 
         except binance.BinanceError as e:
             if e.code in [-2014, -2015]:
@@ -916,6 +917,7 @@ class BinanceTrader(Trader):
                             'buy_order_id': trade_model.buy_order_id
                         })
 
+                    ''' WE AINT READY FOR THIS ONE
                     #audit, did we sell everything we bought?
                     elif float(trade_model.sell_quantity_executed) * 0.99 < float(trade_model.buy_quantity_executed):
                         #confirm the balance is sellable and is available
@@ -940,7 +942,7 @@ class BinanceTrader(Trader):
                                     'quantity': trade_model.buy_quantity_executed,
                                     'order_id': order_id,
                                     'buy_order_id': trade_model.buy_order_id
-                                })
+                                })'''
 
                 if trade_model.buy_status == "FILLED" and not trade_model.sell_status in ['NEW', 'FILLED', 'PARTIALLY_FILLED','CANCELLED','ERRORED']:
                     if not trade_model.buy_price:
