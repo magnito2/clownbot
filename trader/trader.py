@@ -150,13 +150,13 @@ class Trader:
                                 await self.send_notification(
                                     f"{emoji.emojize(':white_check_mark:', use_aliases=True)}Now Selling\n {emoji.emojize(':id:', use_aliases=True)}: #{trade_model.id}\n"
                                     f"Symbol: {trade_model.symbol}\n Buy price: {float(trade_model.executed_buy_price):.8f}\n Sell price: {float(trade_model.sell_price):.8f}\n"
-                                    f"Quantity Bought: {float(trade_model.buy_quantity):.8f}"
+                                    f"Quantity Bought: {float(trade_model.buy_quantity):.8f}\n"
                                     f"Quantity Selling: {float(trade_model.sell_quantity):.8f}")
                             elif float(trade_model.sell_price) > float(trade_model.buy_price):
                                 await self.send_notification(
                                     f"{emoji.emojize(':white_check_mark:', use_aliases=True)}Now Selling\n {emoji.emojize(':id:', use_aliases=True)}: #{trade_model.id}\n"
                                     f"Symbol: {trade_model.symbol}\n Buy price: {float(trade_model.buy_price):.8f}\n Sell price: {float(trade_model.sell_price):.8f}\n"
-                                    f"Quantity Bought: {float(trade_model.buy_quantity):.8f}"
+                                    f"Quantity Bought: {float(trade_model.buy_quantity):.8f}\n"
                                     f"Quantity Selling: {float(trade_model.sell_quantity):.8f}")
                             else:
                                 await self.send_notification(
