@@ -52,8 +52,8 @@ class SignalsForm extends Component{
                     this.props.dispatch(alertActions.error('Invalid input, numbers only'));
                     return;
                 }
-                if(parseInt(input_value) < 1 || parseInt(input_value) > 5 ){
-                    this.props.dispatch(alertActions.error('Profit target should be between 1% and 5%'));
+                if(parseInt(input_value) < 1 || parseInt(input_value) > 20 ){
+                    this.props.dispatch(alertActions.error('Profit target should be between 1% and 20%'));
                     return;
                 }
             }
