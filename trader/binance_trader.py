@@ -921,8 +921,14 @@ class BinanceTrader(Trader):
                         #confirm the balance is sellable and is available
                         asset = await self.get_asset_models(asset=trade_model.base_asset)
                         symbol = await sync_to_async(self.get_symbol_info)(trade_model.symbol)
+                        remaining_qty = float(trade_model.buy_quantity_executed) - float(trade_model.sell_quantity_executed)
+                        if not remaining_qty <= float(asset.free) or remaining_qty * float(trade_model.sell_price) * 0.98 < symbol.min_notional:
+                            continue
                         if float(asset.free) > float(symbol.min_qty) and float(asset.free) * float(trade_model.sell_price) * 0.98 > symbol.min_notional:
-                            logger.info(f"#{trade_model.id}, selling less than was bought, replacing order")
+                            logger.info(
+                                f"#{trade_model.id} - Trade has not placed all bought assets on sell, remaining {trade_model.base_asset} is {remaining_qty:.6f},"
+                                f"{trade_model.base_asset} free {asset.free}, {trade_model.base_asset} notional {remaining_qty * float(trade_model.sell_price)}"
+                                f"{trade_model.base_asset} min notional, {symbol.min_notional}")
                             resp = await self.cancel_order(trade_model.symbol, order_id=trade_model.sell_order_id)
                             if not resp['error']:
                                 order_id = f"SELL_{str(trade_model.buy_order_id)}_2"
