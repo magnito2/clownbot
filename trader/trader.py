@@ -611,6 +611,9 @@ class Trader:
                 total_portfolio += buy_quote - sell_quote
                 total_portfolio += float(asset.free) + float(asset.locked)
 
+            if not total_portfolio:
+                return True
+            
             if signal_assoc.percent_investment and held_portfolio/total_portfolio > signal_assoc.percent_investment:
                 logger.info(f"{self.username}, {signal_name} cannot buy {symbol}")
                 return False

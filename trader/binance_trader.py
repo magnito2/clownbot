@@ -917,6 +917,8 @@ class BinanceTrader(Trader):
                             'buy_order_id': trade_model.buy_order_id
                         })
 
+                    else:
+                        pass
                     ''' WE AINT READY FOR THIS ONE
                     #audit, did we sell everything we bought?
                     elif float(trade_model.sell_quantity_executed) * 0.99 < float(trade_model.buy_quantity_executed):
