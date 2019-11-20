@@ -613,7 +613,7 @@ class Trader:
 
             if not total_portfolio:
                 return True
-            
+
             if signal_assoc.percent_investment and held_portfolio/total_portfolio > signal_assoc.percent_investment:
                 logger.info(f"{self.username}, {signal_name} cannot buy {symbol}")
                 return False

@@ -696,10 +696,10 @@ class BinanceTrader(Trader):
                             #AUDIT TIME !!
                             #did we all everything?
                             if not trade_model.sell_quantity_executed > trade_model.buy_quantity_executed * 0.99: #fee allowance
-                                message += f"{emoji.emojize(':heavy_exclamation_mark:')}, We did not sell everything, Bought {trade_model.buy_quantity_executed}, Sold {trade_model.sell_quantity_executed}"
+                                message += f"{emoji.emojize(':heavy_exclamation_mark:', use_aliases=True)}, We did not sell everything, Bought {trade_model.buy_quantity_executed}, Sold {trade_model.sell_quantity_executed}"
                                 message += f"Attempting to sell the remaining {float(trade_model.buy_quantity_executed) - float(trade_model.sell_quantity_executed)}"
 
-                                order_id = f"SELL_{trade_model.buy_order_id[:24]}_#2"
+                                order_id = f"SELL_{trade_model.buy_order_id[:24]}_2"
                                 await self.orders_queue.put({
                                     'symbol': trade_params['symbol'],
                                     'exchange': 'BINANCE',
