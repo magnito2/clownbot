@@ -19,4 +19,4 @@ class TradeSignal(Base):
     timestamp = Column(DateTime, index=True, default=datetime.utcnow)
 
     def __repr__(self):
-        return f"<Trade Signal({self.id}, {self.exchange}, {self.symbol}, {self.side}, {self.price}, {self.quantity})"
+        return f"<Trade Signal({self.id}, {self.exchange}, {self.symbol}, {self.side}, {self.price}, {self.timestamp})"
