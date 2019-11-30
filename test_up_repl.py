@@ -7,7 +7,8 @@ import logging
 import logging.handlers
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.DEBUG)
+                    level=logging.ERROR)
+logging.getLogger().setLevel(level=logging.ERROR)
 
 logger = logging.getLogger('clone')
 
@@ -19,7 +20,7 @@ logger.addHandler(fh)
 
 # create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.INFO)
 logger.addHandler(ch)
 
 from celebro import Celebro
