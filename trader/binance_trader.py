@@ -123,7 +123,7 @@ class BinanceTrader(Trader):
                 'side': 'BUY',
                 'exchange_account_id': self.account_model_id,
                 'trade_signal_id': kwargs.get('trade_signal_id'),
-                'signal_id': kwargs.get('trade_signal_id')
+                'signal_id': kwargs.get('signal_id')
             }
             return {'error': False, 'result': params, 'additional_info': {'signal': kwargs.get('trade_signal_name')}}
 

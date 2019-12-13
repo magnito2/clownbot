@@ -121,6 +121,9 @@ class Trader:
                         logger.info(resp)
                         result = resp['result']
 
+                        signal_id = result.get('signal_id')
+
+
                         await self.update_trade(**result)
                         await asyncio.sleep(3)
                         trade_model = await self.get_trade_model(buy_order_id=result['buy_order_id'])
@@ -140,8 +143,8 @@ class Trader:
                             else:
                                 sell_price = trade_model.buy_price * (1 + self.profit_margin)
 
-                            await self.send_notification(f"{emoji.emojize(':new:', use_aliases=True)} Trade Initiated\n{emoji.emojize(':id:', use_aliases=True)}: #{trade_model.id}\n "
-                                                     f"Symbol: {result['symbol']}\n quantity: {float(result['buy_quantity']):.8f} \nEntry price: {float(result['buy_price']):.8f}\n"
+                            await self.send_notification(f"{emoji.emojize(':new:', use_aliases=True)} Trade Initiated\n{emoji.emojize(':id:', use_aliases=True)}: #{trade_model.id}\n"
+                                                     f"Symbol: {result['symbol']}\nQuantity: {float(result['buy_quantity']):.8f} \nEntry price: {float(result['buy_price']):.8f}\n"
                                                      f"Target price: {sell_price:.8f}\n"
                                                      f"Stop loss trigger price: {float(result['buy_price']) * (1 - self.stop_loss_trigger):.8f}\n"
                                                      f"Signal: {resp['additional_info']['signal']}")
