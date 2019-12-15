@@ -949,8 +949,15 @@ class BinanceTrader(Trader):
 
                 if trade_model.buy_status == "FILLED" and not trade_model.sell_status in ['NEW', 'FILLED', 'PARTIALLY_FILLED','CANCELLED','ERRORED']:
                     if not trade_model.buy_price:
-                        logger.error(f"[!] Order #{trade_model.buy_order_id} has no buy price, check if it was a market order, trade {trade_model}")
-                        continue
+                        if trade_model.executed_buy_price:
+                            trade_model.buy_price = trade_model.executed_buy_price
+                            await self.update_trade(side='BUY', exchange_account_id=self.account_model_id,
+                                                    buy_order_id=trade_model.buy_order_id, health="",
+                                                    sell_status='',
+                                                    reason="", buy_price = trade_model.executed_buy_price)
+                        else:
+                            logger.error(f"[!] Order #{trade_model.buy_order_id} has no buy price, check if it was a market order, trade {trade_model}")
+                            continue
 
                     asset = await self.get_asset_models(asset=trade_model.base_asset)
                     if not asset or float(asset.free) < float(symbol_info.min_qty):
@@ -968,27 +975,36 @@ class BinanceTrader(Trader):
                     if signal:
                         signal_assoc = await sync_to_async(self.get_account_signal_assoc)(signal_id=signal.id)
                         if signal_assoc and signal_assoc.profit_target:
-                            sell_price = trade_model.buy_price * (1 + signal_assoc.profit_target)
+                            sell_price = float(trade_model.executed_buy_price) * (1 + signal_assoc.profit_target)
                         else:
-                            sell_price = trade_model.buy_price * (1 + self.profit_margin)
+                            sell_price = float(trade_model.executed_buy_price) * (1 + self.profit_margin)
                     else:
-                        sell_price = trade_model.buy_price * (1 + self.profit_margin)
+                        sell_price = float(trade_model.executed_buy_price) * (1 + self.profit_margin)
 
                     order_id = f"SELL_{str(trade_model.buy_order_id)[:20]}"
 
-                    if not float(asset.free) + float(asset.locked) >= float(trade_model.buy_quantity_executed):
-                        if not float(asset.free) * sell_price > symbol_info.min_notional:
-                            await self.update_trade(side='BUY', exchange_account_id=self.account_model_id,
-                                                    buy_order_id=trade_model.buy_order_id, health="ERROR",
-                                                    sell_status='ERRORED',
-                                                    reason="The base asset is less than the amount bought")
-                            continue
+
+                    if not float(asset.free) * sell_price > symbol_info.min_notional:
+                        await self.update_trade(side='BUY', exchange_account_id=self.account_model_id,
+                                                buy_order_id=trade_model.buy_order_id, health="ERROR",
+                                                sell_status='ERRORED',
+                                                reason="The base asset is less than the amount bought")
+                        continue
+
+                    if trade_model.buy_quantity_executed <= float(asset.free):
+                        if float(asset.free) < float(trade_model.buy_quantity_executed) * 1.1:
+                            quantity = float(asset.free)
+                        else:
+                            quantity = float(trade_model.buy_quantity_executed)
+                    else:
+                        quantity = float(trade_model.buy_quantity_executed)
+
                     await self.orders_queue.put({
                         'symbol': trade_model.symbol,
                         'exchange': 'BINANCE',
                         'side': 'SELL',
                         'price': sell_price,
-                        'quantity': trade_model.buy_quantity_executed,
+                        'quantity': quantity,
                         'order_id': order_id,
                         'buy_order_id': trade_model.buy_order_id
                     })
