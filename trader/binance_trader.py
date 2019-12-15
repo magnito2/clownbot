@@ -949,7 +949,7 @@ class BinanceTrader(Trader):
 
                 if trade_model.buy_status == "FILLED" and not trade_model.sell_status in ['NEW', 'FILLED', 'PARTIALLY_FILLED','CANCELLED','ERRORED']:
                     if not trade_model.buy_price:
-                        logger.error(f"[!] Order has no buy price, check if it was a market order")
+                        logger.error(f"[!] Order #{trade_model.buy_order_id} has no buy price, check if it was a market order, trade {trade_model}")
                         continue
 
                     asset = await self.get_asset_models(asset=trade_model.base_asset)
