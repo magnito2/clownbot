@@ -958,8 +958,11 @@ class BinanceTrader(Trader):
                         else:
                             logger.error(f"[!] Order #{trade_model.buy_order_id} has no buy price, check if it was a market order, trade {trade_model}")
                             continue
-
+                    if not trade_model.base_asset:
+                        logger.error(f"Our trade model has not base asset, {trade_model}")
+                    
                     asset = await self.get_asset_models(asset=trade_model.base_asset)
+
                     if not asset or float(asset.free) < float(symbol_info.min_qty):
                         await self.http_update_asset_balances()
                         await asyncio.sleep(10)
