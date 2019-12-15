@@ -960,7 +960,11 @@ class BinanceTrader(Trader):
                             continue
                     if not trade_model.base_asset:
                         logger.error(f"Our trade model has not base asset, {trade_model}")
-                    
+                        await self.update_trade(side='BUY', exchange_account_id=self.account_model_id,
+                                                buy_order_id=trade_model.buy_order_id,
+                                                base_asset = symbol_info.base_asset, quote_asset = symbol_info.quote_asset)
+                        trade_model.base_asset = symbol_info.base_asset
+
                     asset = await self.get_asset_models(asset=trade_model.base_asset)
 
                     if not asset or float(asset.free) < float(symbol_info.min_qty):

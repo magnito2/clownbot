@@ -469,6 +469,7 @@ class Trader:
             await self.outgoing_message_queue.put({'id': 'me', 'message': notification, 'sender': self._exchange, 'username': self.username})
 
     def get_symbol_info(self, symbol):
+        #exchange specific, check binance_trader for implementation
         pass
 
     async def update_portfolio(self):
