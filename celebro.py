@@ -64,7 +64,8 @@ class Celebro:
                         'btc_volume_increase_order_above': float(
                             account.btc_volume_increase_order_above) if account.btc_volume_increase_order_above else 0,
                         'percent_increase_of_order_size': float(
-                            account.percent_increase_of_order_size) if account.percent_increase_of_order_size else 0
+                            account.percent_increase_of_order_size) if account.percent_increase_of_order_size else 0,
+                        'max_age_of_trades_in_days': account.max_age_of_trades_in_days
                     }
                     valid = self.validate_account_model_params(kwargs)
                     if not valid:
@@ -97,7 +98,8 @@ class Celebro:
                         'btc_volume_increase_order_above': float(
                             account.btc_volume_increase_order_above) if account.btc_volume_increase_order_above else 0,
                         'percent_increase_of_order_size': float(
-                            account.percent_increase_of_order_size) if account.percent_increase_of_order_size else 0
+                            account.percent_increase_of_order_size) if account.percent_increase_of_order_size else 0,
+                        'max_age_of_trades_in_days': account.max_age_of_trades_in_days
                     }
 
                     valid = self.validate_account_model_params(kwargs)
@@ -196,7 +198,8 @@ class Celebro:
                         'btc_volume_increase_order_above': float(
                             account.btc_volume_increase_order_above) if account.btc_volume_increase_order_above else 0,
                         'percent_increase_of_order_size': float(
-                            account.percent_increase_of_order_size) if account.percent_increase_of_order_size else 0
+                            account.percent_increase_of_order_size) if account.percent_increase_of_order_size else 0,
+                        'max_age_of_trades_in_days': account.max_age_of_trades_in_days
                     }
 
                 kwargs['subscribed_signals'].append('ManualOrder')
@@ -228,7 +231,8 @@ class Celebro:
                         'btc_volume_increase_order_above': float(
                             account.btc_volume_increase_order_above) if account.btc_volume_increase_order_above else 0,
                         'percent_increase_of_order_size': float(
-                            account.percent_increase_of_order_size) if account.percent_increase_of_order_size else 0
+                            account.percent_increase_of_order_size) if account.percent_increase_of_order_size else 0,
+                        'max_age_of_trades_in_days': account.max_age_of_trades_in_days
                     }
 
                 kwargs['subscribed_signals'].append('ManualOrder')

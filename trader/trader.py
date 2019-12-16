@@ -23,7 +23,7 @@ class Trader:
     '''
 
     time_dict = {'S' : 1,'M' : 60,'H' : 60*60, 'D': 60*60*24, 'W': 60*60*24*7}
-    time_re = '(\d+)([HMS]{1}$)'
+    time_re = '(\d+)([WDHMS]{1}$)'
 
     def __init__(self, **kwargs):
         self._exchange = '' #use this to separate binance from bittrex, create separate for each
@@ -63,7 +63,7 @@ class Trader:
 
         self.last_assets_update = datetime.fromtimestamp(0)
         self.max_age_of_portfolio_in_days = 100
-        self.max_age_of_trades_in_days = 30
+        self.max_age_of_trades_in_days = kwargs.get('max_age_of_trades_in_days') if kwargs.get('max_age_of_trades_in_days') else "7D"
 
     async def run(self):
         '''
@@ -137,7 +137,7 @@ class Trader:
                             if signal:
                                 signal_assoc = await sync_to_async(self.get_account_signal_assoc)(signal_id=signal.id)
                                 if signal_assoc and signal_assoc.profit_target:
-                                    sell_price = trade_model.buy_price * (1 + signal_assoc.profit_target)
+                                    sell_price = trade_model.buy_price * (1 + float(signal_assoc.profit_target)/100)
                                 else:
                                     sell_price = trade_model.buy_price * (1 + self.profit_margin)
                             else:

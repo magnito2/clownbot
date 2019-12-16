@@ -36,6 +36,7 @@ class ExchangeAccount(Base):
     btc_volume_increase_order_above = Column(Float) #if symbol daily volume is above this, order size will be increased by percent below
     percent_increase_of_order_size = Column(Float)
     sell_only_mode = Column(Boolean)
+    max_age_of_trades_in_days = Column(String(64))
 
     signal_percent_size = None
     profit_target = None

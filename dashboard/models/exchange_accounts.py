@@ -29,6 +29,7 @@ class ExchangeAccount(db.Model):
         db.Float)  # if symbol daily volume is above this, order size will be increased by percent below
     percent_increase_of_order_size = db.Column(db.Float)
     sell_only_mode = db.Column(db.Boolean)
+    max_age_of_trades_in_days = db.Column(db.String(64))
 
     def serialize(self):
         return {
@@ -51,7 +52,8 @@ class ExchangeAccount(db.Model):
             'max_orders_per_pair': self.max_orders_per_pair,
             'sell_only_mode': self.sell_only_mode,
             'btc_volume_increase_order_above': self.btc_volume_increase_order_above,
-            'percent_increase_of_order_size': self.percent_increase_of_order_size *100 if self.percent_increase_of_order_size else 0 #remember this, always.
+            'percent_increase_of_order_size': self.percent_increase_of_order_size *100 if self.percent_increase_of_order_size else 0, #remember this, always.
+            'max_age_of_trades_in_days' : self.max_age_of_trades_in_days
         }
 
     def __repr__(self):

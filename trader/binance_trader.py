@@ -652,7 +652,7 @@ class BinanceTrader(Trader):
                         if signal:
                             signal_assoc = await sync_to_async(self.get_account_signal_assoc)(signal_id=signal.id)
                             if signal_assoc and signal_assoc.profit_target:
-                                sell_price = avg_price * (1 + signal_assoc.profit_target)
+                                sell_price = avg_price * (1 + float(signal_assoc.profit_target)/100)
                             else:
                                 sell_price = avg_price * (1 + self.profit_margin)
                         else:
@@ -882,6 +882,8 @@ class BinanceTrader(Trader):
                     market_price = float(market_price_resp['result'])
 
                     if market_price < float(trade_model.buy_price) * (1 - self.stop_loss_trigger):  # we've gone below our stop loss
+                        '''CHECKING FOR STOP LOSS'''
+
                         if trade_model.sell_price < market_price * 1.005:
                             continue  # no need to stop stop-losses
 
@@ -907,6 +909,38 @@ class BinanceTrader(Trader):
                                 self.send_admin_notification(admin_message)
 
                         order_id = f"SELL-LOSS_{str(trade_model.buy_order_id)[:20]}"
+
+                        await self.orders_queue.put({
+                            'symbol': trade_model.symbol,
+                            'exchange': 'BINANCE',
+                            'side': 'SELL',
+                            'price': sell_price,
+                            'quantity': trade_model.buy_quantity_executed,
+                            'order_id': order_id,
+                            'buy_order_id': trade_model.buy_order_id
+                        })
+
+                    elif trade_model.sell_time and datetime.utcnow() - trade_model.sell_time > self.parse_time(self.max_age_of_trades_in_days):
+                        '''
+                        KILLING TRADES THAT HAVE STAYED OPEN TOO LONG
+                        '''
+                        logger.warning(f'[!] Trade #{trade_model.id} has stayed open for too long, closing it now')
+
+                        sell_price = market_price #lets just sell at market and go
+
+                        resp = await self.cancel_order(trade_model.symbol, order_id=trade_model.sell_order_id)
+
+                        if resp['error']:
+                            logger.error(resp['message'])
+                            if 'Unknown order sent' in resp['message']:
+                                #await self.delete_order_model(trade_model.buy_order_id)
+                                admin_message = f"{emoji.emojize(':x:', use_aliases=True)} Error cancelling sell Order\n"
+                                admin_message += f"#{emoji.emojize(':id:', use_aliases=True)} {trade_model.id}\n"
+                                admin_message += f"Order id {trade_model.sell_order_id}\n"
+                                admin_message += f"Symbol {trade_model.symbol}, Buy {trade_model.buy_price}, Current Market Price {market_price}"
+                                self.send_admin_notification(admin_message)
+
+                        order_id = f"SELL-TIMEOUT-EXIT_{str(trade_model.buy_order_id)[:12]}"
 
                         await self.orders_queue.put({
                             'symbol': trade_model.symbol,
@@ -982,7 +1016,7 @@ class BinanceTrader(Trader):
                     if signal:
                         signal_assoc = await sync_to_async(self.get_account_signal_assoc)(signal_id=signal.id)
                         if signal_assoc and signal_assoc.profit_target:
-                            sell_price = float(trade_model.executed_buy_price) * (1 + signal_assoc.profit_target)
+                            sell_price = float(trade_model.executed_buy_price) * (1 + float(signal_assoc.profit_target)/100)
                         else:
                             sell_price = float(trade_model.executed_buy_price) * (1 + self.profit_margin)
                     else:
@@ -996,6 +1030,7 @@ class BinanceTrader(Trader):
                                                 buy_order_id=trade_model.buy_order_id, health="ERROR",
                                                 sell_status='ERRORED',
                                                 reason="The base asset is less than the amount bought")
+
                         continue
 
                     if trade_model.buy_quantity_executed <= float(asset.free):
