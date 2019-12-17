@@ -46,7 +46,7 @@ class Trader:
         self.keep_running = True
         self.api_key = kwargs.get('api_key')
 
-        self.routine_check_interval = 60*1
+        self.routine_check_interval = 60*10
 
         if kwargs.get('use_fixed_amount_per_order') and kwargs.get('fixed_amount_per_order'):
             self.btc_per_order = float(kwargs.get('fixed_amount_per_order'))
