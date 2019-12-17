@@ -12,6 +12,8 @@ async def recreate_trades():
     print("Recreating the lost trades")
 
     for trader in celebro_instance.exchange_traders:
+        if not trader._exchange == "BINANCE":
+            continue
         account = trader.account
 
         start_time = time.time()
@@ -52,6 +54,7 @@ async def recreate_trades():
                 'side': 'BUY',
                 'buy_order_id': buy_order_id,
                 'buy_price' : market_price,
+                'executed_buy_price' : market_price,
                 'signal_id' : 5
             }
 
