@@ -20,6 +20,7 @@ async def recreate_trades():
 
         for order in open_orders:
 
+            print(f"Adding #{order['symbol']} into trades")
             symbol_info = trader.get_symbol_info(order['symbol'])
 
 
@@ -43,7 +44,7 @@ async def recreate_trades():
                 'base_asset': symbol_info.base_asset,
                 'sell_status': order['status'],
                 'buy_status': 'FILLED',
-                'side': 'SELL',
+                'side': 'BUY',
                 'buy_order_id': order['clientOrderId'].split("_")[1] if len(order['clientOrderId'].split("_")) == 2 else "",
                 'buy_price' : market_price,
                 'signal_id' : 5
