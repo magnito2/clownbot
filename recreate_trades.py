@@ -32,10 +32,11 @@ async def recreate_trades():
 
             buy_order_id = order['clientOrderId'].split("_")[1] if len(order['clientOrderId'].split("_")) == 2 else ""
             if not buy_order_id:
-                print("no buy order id")
+                print(f"no buy order id, cloid {order['clientOrderId']}")
                 continue
             trade_params = {
                 'exchange': "BINANCE",
+                'exchange_account_id' : trader.account_model_id,
                 'symbol': order['symbol'],
                 'sell_order_id': order['orderId'],
                 'buy_time': datetime.utcfromtimestamp(int(order['updateTime']) / 1000),

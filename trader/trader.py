@@ -432,7 +432,7 @@ class Trader:
                     session.query(Trade).filter_by(buy_order_id=str(buy_order_id)).update(kwargs)
                 else:
                     if not exchange_account_id:
-                        logger.error('[!] Include buy order id')
+                        logger.error('[!] Include Exchange account Id')
                         return
                     trade = Trade(**kwargs)
                     session.add(trade)
