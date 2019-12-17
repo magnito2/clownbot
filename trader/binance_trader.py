@@ -982,7 +982,8 @@ class BinanceTrader(Trader):
                                     'buy_order_id': trade_model.buy_order_id
                                 })'''
 
-                if trade_model.buy_status == "FILLED" and not trade_model.sell_status in ['NEW', 'FILLED', 'PARTIALLY_FILLED','CANCELLED','ERRORED']:
+                if trade_model.buy_status == "FILLED" and not trade_model.sell_status in ['NEW', 'FILLED', 'PARTIALLY_FILLED','CANCELLED','ERRORED'] or trade_model.buy_status == "FILLED" and not trade_model.sell_status:
+                    logger.info(f"[!] Trade #{trade_model.id} was bought but never sold, selling")
                     if not trade_model.buy_price:
                         if trade_model.executed_buy_price:
                             trade_model.buy_price = trade_model.executed_buy_price
@@ -1030,7 +1031,7 @@ class BinanceTrader(Trader):
                         await self.update_trade(side='BUY', exchange_account_id=self.account_model_id,
                                                 buy_order_id=trade_model.buy_order_id, health="ERROR",
                                                 sell_status='ERRORED',
-                                                reason="The base asset is less than the amount bought")
+                                                reason=f"The amount of {asset.name} remaining is {asset.free}, less than minimum notional, sell price {sell_price}, minimum notional {symbol_info.min_notional}")
 
                         continue
 

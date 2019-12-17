@@ -663,8 +663,9 @@ class Streamer:
             return
 
         self.__open_sockets.remove(id)
-        self.__pending_reads[id].cancel()
-        del self.__pending_reads[id]
+        if id in self.__pending_reads:
+            self.__pending_reads[id].cancel()
+            del self.__pending_reads[id]
 
         _log("Stream closed: " + id)
 

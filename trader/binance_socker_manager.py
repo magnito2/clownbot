@@ -36,7 +36,7 @@ class BinanceSocketManager:
                 'stop_price': stop_price
             }
             self.__subscription[symbol].append(params)
-            logger.debug(f"[+] Adding {bot} to {symbol}")
+            logger.debug(f"[+] Adding {bot.username} to {symbol}")
 
     def unsubscribe(self, symbol, buy_order_id):
         if symbol in self.__subscription:
