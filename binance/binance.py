@@ -392,7 +392,7 @@ class Account:
 
         return _geturl_json(_URLS["order"], params, True, method="DELETE", api_key=self.__api_key, api_secret_key=self.__api_secret_key)
 
-    def open_orders(self, symbol):
+    def open_orders(self, symbol= None):
         """ Gets all the open orders for a given symbol
         :param symbol: the market symbol (ie: BNBBTC)
         :return: an array of dicts containing info about all the open orders
