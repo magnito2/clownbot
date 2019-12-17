@@ -58,7 +58,7 @@ async def recreate_trades():
             await trader.update_trade(**trade_params)
 
         if time.time() - start_time < 60*60:
-            asyncio.sleep(60*60 - (time.time() - start_time))
+            await asyncio.sleep(60*60 - (time.time() - start_time))
 
 if __name__ == "__main__":
     asyncio.run(recreate_trades())
