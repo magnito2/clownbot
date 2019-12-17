@@ -30,6 +30,10 @@ async def recreate_trades():
                 continue
             market_price = float(market_price_resp['result'])
 
+            buy_order_id = order['clientOrderId'].split("_")[1] if len(order['clientOrderId'].split("_")) == 2 else ""
+            if not buy_order_id:
+                print("no buy order id")
+                continue
             trade_params = {
                 'exchange': "BINANCE",
                 'symbol': order['symbol'],
@@ -45,7 +49,7 @@ async def recreate_trades():
                 'sell_status': order['status'],
                 'buy_status': 'FILLED',
                 'side': 'BUY',
-                'buy_order_id': order['clientOrderId'].split("_")[1] if len(order['clientOrderId'].split("_")) == 2 else "",
+                'buy_order_id': buy_order_id,
                 'buy_price' : market_price,
                 'signal_id' : 5
             }
