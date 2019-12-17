@@ -860,6 +860,7 @@ class BinanceTrader(Trader):
         :return:
         '''
         try:
+            logger.info(f"[!] Routine check of {self.username}")
             trades_models = await self.get_trade_models()
             open_trades_models = [trade for trade in trades_models if trade.sell_status != "FILLED" and trade.health != "ERROR"]
 
