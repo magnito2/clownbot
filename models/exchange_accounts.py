@@ -38,5 +38,10 @@ class ExchangeAccount(Base):
     sell_only_mode = Column(Boolean)
     max_age_of_trades_in_days = Column(String(64))
 
+    use_different_targets_for_small_prices = Column(Boolean)  # for smaller priced coins, you can increase the targets as price movements are higher
+    small_price_value_in_satoshis = Column(Float)  # 1 satoshi == 1/100,000,000 BTC
+    small_price_take_profit = Column(Float)
+    small_price_stop_loss = Column(Float)
+
     signal_percent_size = None
     profit_target = None

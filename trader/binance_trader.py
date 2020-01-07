@@ -648,15 +648,31 @@ class BinanceTrader(Trader):
                 if trade_params['type'] == "TRADE":
                     if trade_params['side'] == "BUY" and trade_params['status'] in ['FILLED']: #we have bought something, lets put up a sell
                         avg_price = float(trade_params['cummulative_quote_asset_transacted']) / float(trade_params['cummulative_filled_quantity'])
-                        signal = trade_model.get_signal()
-                        if signal:
-                            signal_assoc = await sync_to_async(self.get_account_signal_assoc)(signal_id=signal.id)
-                            if signal_assoc and signal_assoc.profit_target:
-                                sell_price = avg_price * (1 + float(signal_assoc.profit_target)/100)
+
+                        #check if option to use different targets for small coins is set
+                        if self.use_different_targets_for_small_prices and self.small_price_take_profit:
+                            #lets us get the quote asset
+                            symbol_info = self.get_symbol_info(trade_params['symbol'])
+                            quote_asset = symbol_info.quote_asset
+
+                            #lets get quote asset price
+                            quote_asset_price_in_btc = get_btc_price(quote_asset)
+                            if quote_asset_price_in_btc:
+                                base_asset_price_in_btc = quote_asset_price_in_btc * avg_price
+
+                                if base_asset_price_in_btc * 100000000 < self.small_price_value_in_satoshis:
+                                    logger.info(f"[!] Price below {self.small_price_value_in_satoshis} satoshis detected, overiding targets")
+                                    sell_price = avg_price * (1 + float(self.small_price_take_profit)/100)
+                        else:
+                            signal = trade_model.get_signal()
+                            if signal:
+                                signal_assoc = await sync_to_async(self.get_account_signal_assoc)(signal_id=signal.id)
+                                if signal_assoc and signal_assoc.profit_target:
+                                    sell_price = avg_price * (1 + float(signal_assoc.profit_target)/100)
+                                else:
+                                    sell_price = avg_price * (1 + self.profit_margin)
                             else:
                                 sell_price = avg_price * (1 + self.profit_margin)
-                        else:
-                            sell_price = avg_price * (1 + self.profit_margin)
 
                         logger.info(f"[+]{self.username} Trade event, we've bought {trade_params['cummulative_filled_quantity']} at {avg_price}")
                         logger.info(f"[+] Placing a sell for {trade_params['cummulative_filled_quantity']} at {sell_price}")
@@ -705,7 +721,7 @@ class BinanceTrader(Trader):
                                     'symbol': trade_params['symbol'],
                                     'exchange': 'BINANCE',
                                     'side': 'SELL',
-                                    'price': trade_model.sell_price ,
+                                    'price': trade_model.executed_sell_price ,
                                     'quantity': float(trade_model.buy_quantity_executed) - float(trade_model.sell_quantity_executed),
                                     'order_id': order_id,
                                     'buy_order_id': trade_model.buy_order_id
@@ -875,6 +891,14 @@ class BinanceTrader(Trader):
                                                 sell_status='ERRORED',
                                                 reason="Buy order not found in exchange")
 
+                if not trade_model.buy_price and trade_model.buy_status == "FILLED":
+                    if trade_model.executed_buy_price:
+                        trade_model.buy_price = trade_model.executed_buy_price
+                        await self.update_trade(side='BUY', exchange_account_id=self.account_model_id,
+                                                buy_order_id=trade_model.buy_order_id, health="",
+                                                sell_status='',
+                                                reason="", buy_price=trade_model.executed_buy_price)
+
                 if trade_model.buy_status == "FILLED" and trade_model.sell_status in ["NEW", "PARTIALLY_FILLED"]:
                     market_price_resp = await self.get_avg_price(trade_model.symbol)
                     if market_price_resp['error']:
@@ -882,8 +906,27 @@ class BinanceTrader(Trader):
                         continue
                     market_price = float(market_price_resp['result'])
 
-                    if market_price < float(trade_model.buy_price) * (1 - self.stop_loss_trigger):  # we've gone below our stop loss
+                    if market_price < float(trade_model.executed_buy_price) * (1 - self.stop_loss_trigger):  # we've gone below our stop loss
                         '''CHECKING FOR STOP LOSS'''
+
+                        # check if option to use different targets for small coins is set
+                        if self.use_different_targets_for_small_prices and self.small_price_stop_loss:
+                            # lets us get the quote asset
+                            quote_asset = symbol_info.quote_asset
+
+                            # lets get quote asset price
+                            quote_asset_price_in_btc = get_btc_price(quote_asset)
+                            if quote_asset_price_in_btc:
+                                base_asset_price_in_btc = quote_asset_price_in_btc * trade_model.buy_price
+
+                                if base_asset_price_in_btc * 100000000 < self.small_price_value_in_satoshis:
+                                    logger.info(
+                                        f"[!] Price below {self.small_price_value_in_satoshis} satoshis detected, overiding targets")
+                                    if market_price > float(trade_model.buy_price) * (1 - self.small_price_stop_loss):
+                                        logger.info(f"[*] #{trade_model.id} Ignoring the convention stop loss, price okay for small price stop loss\n"
+                                                    f"buy price {trade_model.buy_price}, market price {market_price}, new stop loss"
+                                                    f" {float(trade_model.buy_price) * (1 - self.small_price_stop_loss)}")
+                                        continue
 
                         if trade_model.sell_price < market_price * 1.005:
                             continue  # no need to stop stop-losses
@@ -994,6 +1037,7 @@ class BinanceTrader(Trader):
                         else:
                             logger.error(f"[!] Order #{trade_model.buy_order_id} has no buy price, check if it was a market order, trade {trade_model}")
                             continue
+
                     if not trade_model.base_asset:
                         logger.error(f"Our trade model has not base asset, {trade_model}")
                         await self.update_trade(side='BUY', exchange_account_id=self.account_model_id,
@@ -1127,6 +1171,27 @@ class BinanceTrader(Trader):
             logger.error(f"{self.username} Stop loss placed on a trade in error, #{trade_model}")
             return
         if trade_model.sell_status in ["NEW","PARTIALLY_FILLED"]:
+
+            # check if option to use different targets for small coins is set
+            if self.use_different_targets_for_small_prices and self.small_price_stop_loss:
+                # lets us get the quote asset
+                symbol_info = self.get_symbol_info(trade_model.symbol)
+                quote_asset = symbol_info.quote_asset
+                # lets get quote asset price
+                quote_asset_price_in_btc = get_btc_price(quote_asset)
+                if quote_asset_price_in_btc:
+                    base_asset_price_in_btc = quote_asset_price_in_btc * trade_model.executed_buy_price
+                    if base_asset_price_in_btc * 100000000 < self.small_price_value_in_satoshis:
+                        market_price = float(params['price'])
+                        logger.info(
+                            f"[!] Price below {self.small_price_value_in_satoshis} satoshis detected, overiding targets")
+                        if market_price > float(trade_model.executed_buy_price) * (1 - self.small_price_stop_loss):
+                            logger.info(
+                                f"[*] #{trade_model.id} Ignoring the convention stop loss, price okay for small price stop loss\n"
+                                f"buy price {trade_model.buy_price}, market price {market_price}, new stop loss"
+                                f" {float(trade_model.buy_price) * (1 - self.small_price_stop_loss)}")
+                            return
+
             resp = await self.cancel_order(trade_model.symbol, order_id=trade_model.sell_order_id)
 
             if resp['error']:

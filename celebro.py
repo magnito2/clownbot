@@ -65,7 +65,12 @@ class Celebro:
                             account.btc_volume_increase_order_above) if account.btc_volume_increase_order_above else 0,
                         'percent_increase_of_order_size': float(
                             account.percent_increase_of_order_size) if account.percent_increase_of_order_size else 0,
-                        'max_age_of_trades_in_days': account.max_age_of_trades_in_days
+                        'max_age_of_trades_in_days': account.max_age_of_trades_in_days,
+
+                        'use_different_targets_for_small_prices': account.use_different_targets_for_small_prices,
+                        'small_price_value_in_satoshis': account.small_price_value_in_satoshis,
+                        'small_price_take_profit': account.small_price_take_profit,
+                        'small_price_stop_loss': account.small_price_stop_loss,
                     }
                     valid = self.validate_account_model_params(kwargs)
                     if not valid:
@@ -99,7 +104,12 @@ class Celebro:
                             account.btc_volume_increase_order_above) if account.btc_volume_increase_order_above else 0,
                         'percent_increase_of_order_size': float(
                             account.percent_increase_of_order_size) if account.percent_increase_of_order_size else 0,
-                        'max_age_of_trades_in_days': account.max_age_of_trades_in_days
+                        'max_age_of_trades_in_days': account.max_age_of_trades_in_days,
+
+                        'use_different_targets_for_small_prices': account.use_different_targets_for_small_prices,
+                        'small_price_value_in_satoshis': account.small_price_value_in_satoshis,
+                        'small_price_take_profit': account.small_price_take_profit,
+                        'small_price_stop_loss': account.small_price_stop_loss,
                     }
 
                     valid = self.validate_account_model_params(kwargs)
@@ -135,7 +145,7 @@ class Celebro:
         binance_trader_queues = [trader.orders_queue for trader in self.exchange_traders if trader._exchange == "BINANCE"]
         bittrex_traders_queues = [trader.orders_queue for trader in self.exchange_traders if trader._exchange == "BITTREX"]
 
-        magcrypt = MagnitoCrypto(CryptoPingMikeBot)
+        magcrypt = MagnitoCrypto(QualitySignalsChannel)
         self.tg_client = MyTelegramClient(binance_trader_queues, bittrex_traders_queues, [magcrypt, CQSScalpingFree, QualitySignalsChannel, CryptoPingMikeBot, CryptoPingXrayBot], self.tg_kwargs)
         producers = [asyncio.create_task(self.tg_client.run())]
 

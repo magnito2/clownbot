@@ -31,6 +31,11 @@ class ExchangeAccount(db.Model):
     sell_only_mode = db.Column(db.Boolean)
     max_age_of_trades_in_days = db.Column(db.String(64))
 
+    use_different_targets_for_small_prices = db.Column(db.Boolean) #for smaller priced coins, you can increase the targets as price movements are higher
+    small_price_value_in_satoshis = db.Column(db.Float) # 1 satoshi == 1/100,000,000 BTC
+    small_price_take_profit = db.Column(db.Float)
+    small_price_stop_loss = db.Column(db.Float)
+
     def serialize(self):
         return {
             'exchange': self.exchange,
@@ -53,7 +58,12 @@ class ExchangeAccount(db.Model):
             'sell_only_mode': self.sell_only_mode,
             'btc_volume_increase_order_above': self.btc_volume_increase_order_above,
             'percent_increase_of_order_size': self.percent_increase_of_order_size *100 if self.percent_increase_of_order_size else 0, #remember this, always.
-            'max_age_of_trades_in_days' : self.max_age_of_trades_in_days
+            'max_age_of_trades_in_days' : self.max_age_of_trades_in_days,
+
+            'use_different_targets_for_small_prices': self.use_different_targets_for_small_prices,
+            'small_price_value_in_satoshis': self.small_price_value_in_satoshis,
+            'small_price_take_profit': self.small_price_take_profit,
+            'small_price_stop_loss': self.small_price_stop_loss
         }
 
     def __repr__(self):

@@ -65,6 +65,11 @@ class Trader:
         self.max_age_of_portfolio_in_days = 100
         self.max_age_of_trades_in_days = kwargs.get('max_age_of_trades_in_days') if kwargs.get('max_age_of_trades_in_days') else "7D"
 
+        self.use_different_targets_for_small_prices = kwargs.get('use_different_targets_for_small_prices')
+        self.small_price_value_in_satoshis = kwargs.get('small_price_value_in_satoshis')
+        self.small_price_take_profit = kwargs.get('small_price_take_profit')
+        self.small_price_stop_loss = kwargs.get('small_price_stop_loss')
+
     async def run(self):
         '''
         The main loop, see if this can be removed
@@ -113,6 +118,7 @@ class Trader:
                                 trade_model = await self.get_trade_model(buy_order_id=order_params['buy_order_id'])
                                 if not trade_model:
                                     self.price_streamer.unsubscribe(order_params['symbol'], order_params['buy_order_id'])
+                                    continue
                                 if "SELL" in order_params['order_id'] :
                                     await self.update_trade(side='BUY', exchange_account_id=self.account_model_id,
                                                             buy_order_id=trade_model.buy_order_id, health="ERROR",

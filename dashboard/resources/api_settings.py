@@ -20,6 +20,11 @@ parser.add_argument('btc_volume_increase_order_above')
 parser.add_argument('percent_increase_of_order_size')
 parser.add_argument('sell_only_mode')
 
+parser.add_argument('use_different_targets_for_small_prices')
+parser.add_argument('small_price_value_in_satoshis')
+parser.add_argument('small_price_take_profit')
+parser.add_argument('small_price_stop_loss')
+
 class ExchangeSettings(Resource):
 
     @jwt_required
@@ -51,6 +56,11 @@ class ExchangeSettings(Resource):
         btc_volume_increase_order_above = args.get('btc_volume_increase_order_above')
         percent_increase_of_order_size = args.get('percent_increase_of_order_size')
         sell_only_mode = args.get('sell_only_mode')
+
+        use_different_targets_for_small_prices = args.get('use_different_targets_for_small_prices')
+        small_price_value_in_satoshis = args.get('small_price_value_in_satoshis')
+        small_price_take_profit = args.get('small_price_take_profit')
+        small_price_stop_loss = args.get('small_price_stop_loss')
 
         has_error = False
         response = ''
@@ -84,13 +94,20 @@ class ExchangeSettings(Resource):
                 exchange_account.btc_volume_increase_order_above = btc_volume_increase_order_above
                 exchange_account.percent_increase_of_order_size = float(percent_increase_of_order_size) / 100
             else:
-
                 if exchange_account.btc_volume_increase_order_above or exchange_account.percent_increase_of_order_size:
-
                     exchange_account.btc_volume_increase_order_above = 0
                     exchange_account.percent_increase_of_order_size = 0
             if sell_only_mode in ['True', 'False']:
                 exchange_account.sell_only_mode = True if sell_only_mode == "True" else False
+
+            if use_different_targets_for_small_prices in ['True', 'False']:
+                exchange_account.use_different_targets_for_small_prices = True if use_different_targets_for_small_prices == "True" else False
+            if small_price_value_in_satoshis:
+                exchange_account.small_price_value_in_satoshis = small_price_value_in_satoshis
+            if small_price_take_profit:
+                exchange_account.small_price_take_profit = small_price_take_profit
+            if small_price_stop_loss:
+                exchange_account.small_price_stop_loss = small_price_stop_loss
 
             db.session.add(exchange_account)
             db.session.commit()
