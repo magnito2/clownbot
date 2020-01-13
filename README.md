@@ -7,7 +7,7 @@ Other settings are provided by the user.
 ## Warning
 **This project is still under development. Use it to learn. use it to trade at your own risk.**
 
-## Installation on ubuntu. 
+## Installation in Linux (tested in Ubuntu). 
 *windows users should be able to follow with some minor adjustments*
 1. Pull the repo
 2. Install the requirements
