@@ -44,22 +44,26 @@ Other settings are provided by the user.
   FLASK_RUN_PORT=5000
   ```
 5. Create a `config.ini` file with the following fields
-    * `[DEFAULT]`
-    * `Telegram_API_ID = your telegram id`
-    * `Telegram_API_HASH = your telegram hash`
-    * `LOG_LEVEL = 10` #or preferred log level
+   ```bash
+    [DEFAULT]
+    Telegram_API_ID = your telegram id
+    Telegram_API_HASH = your telegram hash
+    LOG_LEVEL = 10 #or preferred log level
 
-    * `[SQLALCHEMY]`
-    * `DATABASE_URI = mysql://username:password@localhost/clown` #checkout sqlalchemy database url format
+    [SQLALCHEMY]
+    DATABASE_URI = mysql://username:password@localhost/clown #checkout sqlalchemy database url format
 
-    * `[HTTP_SIGNAL_RECIEVER]`
-    * `PORT=5080`
+    [HTTP_SIGNAL_RECIEVER]
+    PORT=5080
+    ```
     
 6.  Create migrations for the database
 
     *with the virtual environment activate*
-    * `flask db migrate`
-    * `flask db upgrade`
+    ```bash
+    $ flask db migrate
+    $flask db upgrade
+    ```
 7. Launch!! 
     *there are 3 modules
     * shell 1 with venv active, `python main.py`
