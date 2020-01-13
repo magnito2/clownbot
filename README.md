@@ -14,24 +14,35 @@ Other settings are provided by the user.
 1. Pull the repo
 2. Install the requirements
   * Ensure you have python >= 3.6, mysql and node js installed.
-  * Create a new python virtual environment and activate it. `virtualenv venv` then `. /venv/bin/activate`
-  * To install the python dependencies **inside your virtual environment**, type `pip install -i requirements.txt` and enter
+  * Create a new python virtual environment and activate it. 
+  ```bash
+  $ virtualenv venv
+  $ . /venv/bin/activate
+  ```
+  * To install the python dependencies **inside your virtual environment**,
+  ```bash
+  $ pip install -r requirements.txt
+  ```
   * To install node js dependencies for the dashboard;
-      - `cd clone-front`
-      - type `npm install` and enter
+  ```bash
+  $ cd clone-front
+  $ npm install
+  ```
 3. Create a mysql database
 4. Create a `.flaskenv` file with the following fields
-   *  `FLASK_APP=dashboard/flaskapp.py`
-   *  `DATABASE_URL=mysql://root:@localhost/clown` #or whichever name you like
-   *  `MAIL_USERNAME=you@yourdomain.com`
-   *  `MAIL_PASSWORD=youmailpassword` #read more from flask documentation about email support
-   *  `BOT_ADDRESS=http://localhost:5080/signal` #change port later if this address is in use
-   *  `SECURITY_PASSWORD_SALT=your salt`
-   *  `HMAC_KEY=your hmac key`
-   *  `JWT_SECRET_KEY=`
-   *  `SECRET_KEY=`
-   *  `ADMINS=`
-   *  `FLASK_RUN_PORT=5000`
+ ```bash 
+  FLASK_APP=dashboard/flaskapp.py
+  DATABASE_URL=mysql://root:@localhost/clown #or whichever name you like
+  MAIL_USERNAME=you@yourdomain.com
+  MAIL_PASSWORD=youmailpassword #read more from flask documentation about email support
+  BOT_ADDRESS=http://localhost:5080/signal #change port later if this address is in use
+  SECURITY_PASSWORD_SALT=your salt
+  HMAC_KEY=your hmac key
+  JWT_SECRET_KEY=
+  SECRET_KEY=
+  ADMINS=
+  FLASK_RUN_PORT=5000
+  ```
 5. Create a `config.ini` file with the following fields
     * `[DEFAULT]`
     * `Telegram_API_ID = your telegram id`
