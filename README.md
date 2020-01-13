@@ -7,7 +7,7 @@ This bot uses external signals fetched from telegram channels to place trades.
 Other settings are provided by the user.
 
 ## Warning
-**This project is still under development. Use it to learn. use it to trade at your own risk.**
+**This project is still under development. Use it for educational purposes. Trade with it at your own risk.**
 
 ## Installation in Linux (tested in Ubuntu). 
 *windows users should be able to follow with some minor adjustments*
