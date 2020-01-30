@@ -1,6 +1,6 @@
 ![alt text](https://github.com/magnito2/clownbot/blob/master/clone-front/public/images/icon/clown.png "Clown Bot")
 
-# [clownbot](http://server.sontran.us:8081/)
+# clownbot
 A cryptocurrency trader for binance and bittrex
 
 This bot uses external signals fetched from telegram channels to place trades.
