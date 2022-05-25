@@ -47,7 +47,7 @@ pyaes==1.6.1
 pyasn1==0.4.5
 pycparser==2.19
 Pygments==2.4.0
-PyJWT==1.7.1
+PyJWT==2.4.0
 python-bittrex==0.3.0
 python-dateutil==2.8.0
 python-dotenv==0.10.1
